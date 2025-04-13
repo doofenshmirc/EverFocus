@@ -2,9 +2,8 @@
 
 ThrottleClass *ThrottleClass::_first = nullptr;
 
-ThrottleClass::ThrottleClass(SlotClass *slot) {
-  _slot = slot;
-  _name = nullptr;
+ThrottleClass::ThrottleClass(LocoClass *loco) {
+  _loco = loco;
  
   if (!_first) {
     _first = this;
@@ -17,78 +16,43 @@ ThrottleClass::ThrottleClass(SlotClass *slot) {
   }
 }
 
-void ThrottleClass::init() {
-
+void ThrottleClass::incReverser() { 
+  if ( _loco->getSpeed() == 0 && _reverser < 1) { _reverser++; }
 }
 
-/*void ThrottleClass::setThrottle(uint8_t speed, uint8_t dir) { 
-  uint8_t id = CommandStation.addSlot(_addr, 0);
+void ThrottleClass::decReverser() { 
+  if ( _loco->getSpeed() == 0 && _reverser > -1) { _reverser--; }
+}
 
-  if ( CommandStation.setSlotThrottle(_addr, speed, dir) ) {
-    DCCEXDelegate.sendThrottle(_addr, speed, dir);
+void ThrottleClass::incGear() {
+  if ( _brake < 0 ) { 
+    _brake++; 
+  } else if ( _throttle < 5 ) {
+    _throttle++;
   }
 }
 
-void ThrottleClass::setSpeed(uint8_t speed) { 
-  _speed = speed;
-  if (_dccexProtocol) {
-    _loco->setSpeed(speed);
-    _dccexProtocol->setThrottle(_loco, _loco->getSpeed(), _loco->getDirection());
-  }    
-//  if (_loconetProtocol) {
-//    _loconetProtocol->send(OPC_LOCO_SPD, _slot, speed);
-//  }
-}
-
-uint8_t ThrottleClass::getSpeed() { return _speed; }
-
-void ThrottleClass::setDirection(uint8_t direction) {
-  _direction = direction;
-  if (_dccexProtocol) {
-    _loco->setDirection(direction ? Direction::Forward : Direction::Reverse); 
-    _dccexProtocol->setThrottle(_loco, _loco->getSpeed(), _loco->getDirection());
+void ThrottleClass::decGear() {
+  if ( _throttle > 0 ) { 
+    _throttle--; 
+  } else if ( _brake > -5 ) {
+    _brake--;
   }
 }
 
-uint8_t ThrottleClass::getDirection() { return _direction; }
-
-void ThrottleClass::setName(const char *name) {
-  if (_name) {
-    delete[] _name;
-    _name = nullptr;
-  }
-  int nameLength = strlen(name);
-  _name = new char[nameLength + 1];
-  strcpy(_name, name);
+void ThrottleClass::check() {
+  // Routine calls here included in the loop to read encoder or other inputs
 }
 
-void ThrottleClass::setFunction(uint8_t function, uint8_t value) {
-  value ? _functions |= (1 << function) : _functions &= ~(1 << function);
-
-  if (_dccexProtocol) {
-    _loco->setFunctionStates(_functions); 
-    value ? _dccexProtocol->functionOn(_loco, function) : _dccexProtocol->functionOff(_loco, function);
-  }
-}
-const char *ThrottleClass::getName() { return _name; }
-
-void ThrottleClass::setSlot(uint8_t slot ) { _slot = slot; }
-
-uint8_t ThrottleClass::getSlot() { return _slot; }
-
-void ThrottleClass::setAddress(uint16_t addr ) { _addr = addr; }
-
-uint16_t ThrottleClass::getAddress() { return _addr; }
-*/
 ThrottleClass *ThrottleClass::getFirst() { return _first; }
 
 void ThrottleClass::setNext(ThrottleClass *throttle) { _next = throttle; }
 
 ThrottleClass *ThrottleClass::getNext() { return _next; }
 
-ThrottleClass *ThrottleClass::getByAddress(uint16_t address) {
+ThrottleClass *ThrottleClass::getByAddress(uint16_t addr) {
   for (ThrottleClass *t = ThrottleClass::getFirst(); t; t = t->getNext()) {
-    if (t->_slot->getAddress() == address) {
+    if (t->getAddress() == addr) {
       return t;
     }
   }
@@ -126,11 +90,6 @@ void ThrottleClass::clearThrottleList() {
 
 ThrottleClass::~ThrottleClass() {
   _removeFromList(this);
-
-  if (_name) {
-    delete[] _name;
-    _name = nullptr;
-  }
 
   _next = nullptr;
 }

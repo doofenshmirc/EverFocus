@@ -28,20 +28,21 @@ void DCCEXInterfaceClass::receivedLocoUpdate(Loco *loco) {
 }
  
 void DCCEXInterfaceClass::receivedLocoBroadcast(int addr, int speed, Direction direction, int functions) {
-  DIAG("Received Loco broadcast: address=%u|speed=%u|direction=%u|functionMap=%u\n", addr, speed, (uint8_t)direction, functions);
+  DIAG("Receive DCCEX broadcast: address=%u|speed=%u|direction=%u|functionMap=%u\n", addr, speed, (uint8_t)direction, functions);
 
-  uint8_t id = CommandStation.addSlot((uint16_t)addr, 0);
-  if ( id < 128 ) {
-    if ( CommandStation.getSlotStatus(addr) != SLOT_STAT_READY ) {
-      if ( CommandStation.getSlotSpeed(addr) == (uint8_t)speed && CommandStation.getSlotDirection(addr) == (uint8_t)direction && CommandStation.getSlotFunctions(addr) == (uint16_t)functions ) { 
-        CommandStation.setSlotStatus(addr, SLOT_STAT_READY); 
+  LocoClass *loco = CommandStation.addLoco((uint16_t)addr, 0, "NONAME");
+  if ( loco->getSlotId() < 128 ) {
+    if ( CommandStation.getLocoStatus(addr) != SLOT_STAT_READY ) {
+      if ( CommandStation.getLocoSpeed(addr) == (uint8_t)speed && CommandStation.getLocoDirection(addr) == (uint8_t)direction && CommandStation.getLocoFunctions(addr) == (uint16_t)functions ) { 
+        CommandStation.setLocoStatus(addr, SLOT_STAT_READY); 
       }
     }
     
-    if ( CommandStation.getSlotStatus(addr) == SLOT_STAT_READY ) {
-      CommandStation.setSlotSpeed(addr, speed, SRC_DCCEX);
-      CommandStation.setSlotDirection(addr, direction, SRC_DCCEX);
-      CommandStation.setSlotFunctions(addr, functions, SRC_DCCEX);
+    if ( CommandStation.getLocoStatus(addr) == SLOT_STAT_READY ) {
+      CommandStation.setLocoSpeed(addr, speed, SRC_DCCEX);
+      DIAG("DCCEX set loco speed %u\n", speed); 
+      CommandStation.setLocoDirection(addr, direction, SRC_DCCEX);
+      CommandStation.setLocoFunctions(addr, functions, SRC_DCCEX);
     }
   }
 }
@@ -51,33 +52,33 @@ void DCCEXInterfaceClass::receivedSensorState(int addr, bool state) {
   CommandStation.setSensor(addr, state, SRC_DCCEX);
 }
 
-void DCCEXInterfaceClass::sendThrottle(uint16_t addr, uint8_t speed, uint8_t dir) {
+void DCCEXInterfaceClass::setThrottle(uint16_t addr, uint8_t speed, uint8_t dir) {
   Loco loco(addr, LocoSourceEntry);
 
-  CommandStation.setSlotStatus(addr, SLOT_STAT_UNSYNCED);
+  CommandStation.setLocoStatus(addr, SLOT_STAT_UNSYNCED);
   _dccex.setThrottle(&loco, speed, (Direction)dir );
 }
 
-void DCCEXInterfaceClass::sendFunctions(uint16_t addr, uint16_t functions, uint16_t funct_status) {
+void DCCEXInterfaceClass::setFunctions(uint16_t addr, uint16_t functions, uint16_t funct_status) {
   Loco loco(addr, LocoSourceEntry);
 
   DIAG("DCCEXInterfaceClass::sendFunctions addr:%u, functions:%u, funct_status:%u\n", addr, functions, funct_status);
 
-  CommandStation.setSlotStatus(addr, SLOT_STAT_UNSYNCED);
+  CommandStation.setLocoStatus(addr, SLOT_STAT_UNSYNCED);
   for (uint8_t i=0; i<9; i++) {
     if ( funct_status & (0x1 << i) ) (functions >> i) & 0x1 ? _dccex.functionOn(&loco, i) : _dccex.functionOff(&loco, i);
   }
 }
 
-void DCCEXInterfaceClass::sendSwitch(uint16_t addr, uint8_t out, uint8_t dir) {
+void DCCEXInterfaceClass::setSwitch(uint16_t addr, uint8_t out, uint8_t dir) {
   dir ? _dccex.throwTurnout(addr): _dccex.closeTurnout(addr);
 }
 
-void DCCEXInterfaceClass::sendPower(uint8_t power) {
+void DCCEXInterfaceClass::setPower(uint8_t power) {
   power ? _dccex.powerOn() : _dccex.powerOff();
 }
 
-void DCCEXInterfaceClass::sendEmergencyStop() { 
+void DCCEXInterfaceClass::EmergencyStop() { 
   _dccex.emergencyStop(); 
 }
 

@@ -1,63 +1,26 @@
 #pragma once
 
-#include "Slot.h"
+#include "Arduino.h"
+#include "Loco.h"
 
 class ThrottleClass {
   public:
-    ThrottleClass(SlotClass *slot);
+    ThrottleClass(LocoClass *loco);
 
-    void init();
+    uint16_t getAddress() { return _loco->getAddress(); }
+    //void setAddress(uint16_t addr) { _addr = addr; }
 
-/*  void check() {
-    // Routine calls here included in the loop to read encoder or other inputs
-  }
+    int8_t getReverser() { return _reverser; }
+    void incReverser();
+    void decReverser();
 
-  void setThrottle(uint8_t speed, uint8_t dir);
+    int8_t getBrake() { return _brake; }
+    int8_t getThrottle() { return _throttle; }
+    void incGear();
+    void decGear();
 
-  /// @brief Set thrown state (true thrown, false closed)
-  /// @param speed 0-127
-  void setSpeed(uint8_t speed);
+    void check();
 
-  /// @brief Get loco speed
-  /// @param direction true|false
-  uint8_t getSpeed();
-
-  /// @brief Set loco direction
-  /// @param direction true|false
-  void setDirection(uint8_t dir);
-
-  /// @brief Get loco direction
-  /// @param direction true|false
-  uint8_t getDirection();
-
-  /// @brief Set loco direction
-  /// @param direction true|false
-  void setFunction(uint8_t function, uint8_t value);
-
-  /// @brief Set turnout name
-  /// @param _name Name to set the turnout
-  void setName(const char *_name);
-
-  /// @brief Get turnout name
-  /// @return Current name of the turnout
-  const char *getName();
-
-  /// @brief Set LocoNet slot ID
-  /// @return ID of the Loconet slot
-  void setSlot(uint8_t slot);
-
-  /// @brief Get turnout Id
-  /// @return ID of the turnout
-  uint8_t getSlot();
-
-  /// @brief Get thrown state (true thrown, false closed)
-  /// @return true|false
-    void setAddress(uint16_t addr);
-
-  /// @brief Get thrown state (true thrown, false closed)
-  /// @return true|false
-    uint16_t getAddress();
-*/
   /// @brief Get first turnout object
   /// @return Pointer to the first Turnout object
     static ThrottleClass *getFirst();
@@ -73,7 +36,7 @@ class ThrottleClass {
   /// @brief Get turnout object by turnout ID
   /// @param id ID of the turnout to retrieve
   /// @return Pointer to the turnout object or nullptr if not found
-    static ThrottleClass *getByAddress(uint16_t address);
+    static ThrottleClass *getByAddress(uint16_t addr);
 
   /// @brief Clear the list of turnouts
     static void clearThrottleList();
@@ -82,13 +45,12 @@ class ThrottleClass {
     ~ThrottleClass();
 
   private:
-    SlotClass *_slot;
-    uint8_t _brake;
-    uint8_t _throttle;
-    uint8_t _reverser;
+    LocoClass *_loco;
+    int8_t _brake = 0;
+    int8_t _throttle = 0;
+    int8_t _reverser = 0;
     static ThrottleClass *_first;
     ThrottleClass *_next = nullptr;
-    char *_name;
 
     /// @brief Remove the throttle from the list
     /// @param throttle Pointer to the throttle to remove

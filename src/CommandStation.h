@@ -2,17 +2,19 @@
 
 #include "DCCEXInterface.h"
 #include "LocoNetInterface.h"
-#include "Slot.h"
+#include "XpressNetInterface.h"
 #include "Throttle.h"
-#include <LiquidCrystal_I2C.h>
-#include <Encoder.h>
-#include "MemoryFree.h"
+#include "Loco.h"
+#include <ItemBack.h>
+#include <ItemSubMenu.h>
+#include <LcdMenu.h>
+#include <MenuScreen.h>
+#include <SimpleRotary.h>
+#include <display/LiquidCrystal_I2CAdapter.h>
+#include <input/SimpleRotaryAdapter.h>
+#include <renderer/CharacterDisplayRenderer.h>
 #include "config.h"
 #include "diag.h"
-
-#define CS_POWER_CHANGE  0x01
-#define POWER_OFF 0
-#define POWER_ON  1
 
 class CommandStationClass {
   public:
@@ -20,21 +22,26 @@ class CommandStationClass {
 
     void init();
 
-    uint16_t getSlotAddress(uint8_t id);
+    uint16_t getLocoAddress(uint8_t id);
 
-    uint8_t addSlot(uint16_t addr, uint8_t id);
-
-    uint8_t getSlotStatus(uint16_t addr);
-    void setSlotStatus(uint16_t addr, uint8_t status);
+    LocoClass *addLoco(uint16_t addr, uint8_t id, const char *name);
     
-    uint8_t getSlotSpeed(uint16_t addr);
-    void setSlotSpeed(uint16_t addr, uint8_t speed, uint8_t src);
+    ThrottleClass *addThrottle(uint16_t addr, const char *name);
+    
+    const char *getLocoName(uint16_t addr);
+    void setLocoName(uint16_t addr, const char *name);
 
-    uint8_t getSlotDirection(uint16_t addr);
-    void setSlotDirection(uint16_t addr, uint8_t dir, uint8_t src);
+    uint8_t getLocoStatus(uint16_t addr);
+    void setLocoStatus(uint16_t addr, uint8_t status);
+    
+    uint8_t getLocoSpeed(uint16_t addr);
+    void setLocoSpeed(uint16_t addr, uint8_t speed, uint8_t src);
 
-    uint16_t getSlotFunctions(uint16_t addr);
-    void setSlotFunctions(uint16_t addr, uint16_t functions, uint8_t src);
+    uint8_t getLocoDirection(uint16_t addr);
+    void setLocoDirection(uint16_t addr, uint8_t dir, uint8_t src);
+
+    uint16_t getLocoFunctions(uint16_t addr);
+    void setLocoFunctions(uint16_t addr, uint16_t functions, uint8_t src);
 
     void setSensor(uint16_t addr, uint8_t state, uint8_t src);
 
@@ -49,13 +56,13 @@ class CommandStationClass {
 
   private:
     uint8_t _power;
-    uint8_t _status;
-    SlotClass *_slots = nullptr;
+    LocoClass *_locos = nullptr;
     ThrottleClass *_throttles = nullptr;
-    LiquidCrystal_I2C _lcd = LiquidCrystal_I2C(0x27,20,4);
-    Encoder _encoder = Encoder(5, 6);
-    SlotClass *_getSlotById(uint8_t id);
-    SlotClass *_getSlotByAddress(uint16_t addr);
+    ThrottleClass *_leftThrottle = nullptr;
+    ThrottleClass *_rightThrottle = nullptr;
+    LocoClass *_getLocoById(uint8_t id);
+    LocoClass *_getLocoByAddress(uint16_t addr);
+    ThrottleClass *_getThrottleByAddress(uint16_t addr);
 };
 
 extern CommandStationClass CommandStation;

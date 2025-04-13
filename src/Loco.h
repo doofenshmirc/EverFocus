@@ -1,5 +1,5 @@
-#ifndef Slot_H
-#define Slot_H
+#ifndef Loco_H
+#define Loco_H
 
 #include <Arduino.h>
 
@@ -23,16 +23,19 @@
 //Function status
 #define FUNCT_STAT_IDLE    0x00
 
-class SlotClass {
+class LocoClass {
 public:
-  SlotClass(uint16_t addr, uint8_t id);
+  LocoClass(uint16_t addr, uint8_t slot_id, const char *name);
 
-  uint8_t getId() { return _id; }
-  void setId(uint8_t id) { _id = id; }
+  uint8_t getSlotId() { return _slot_id; }
+  void setSlotId(uint8_t slot_id) { _slot_id = slot_id; }
 
   uint16_t getAddress() { return _addr; }
   void setAddress(uint16_t addr) { _addr = addr; }
 
+  const char *getName() { return _name; }
+  void setName(const char *name);
+  
   uint8_t getSlotStatus() { return _slot_status & SLOT_STAT_BIT; }
   void setSlotStatus(uint8_t status) { _slot_status = (_slot_status & ~SLOT_STAT_BIT) | status; }
 
@@ -57,28 +60,29 @@ public:
   uint16_t getFunctions() { return _functions; }
   void setFunctions(uint16_t functions, uint8_t src);
 
-  static SlotClass *getFirst();
-  void setNext(SlotClass *slot);
-  SlotClass *getNext();
+  static LocoClass *getFirst();
+  void setNext(LocoClass *slot);
+  LocoClass *getNext();
 
   /// @brief Clear the list of Slot
   static void clearSlotList();
 
   /// @brief Destructor for a Slot
-  ~SlotClass();
+  ~LocoClass();
 
 private:
-  uint8_t _id;
+  uint8_t _slot_id;
+  uint8_t _slot_status = SLOT_STAT_READY;
   uint16_t _addr;
-  uint8_t _slot_status = 0;
+  char *_name = nullptr;
   uint8_t _speed = 0;
   uint8_t _dir = 0;
   uint16_t _functions = 0;
   uint16_t _func_status = 0xFFFF;
-  static SlotClass *_first;
-  SlotClass *_next = nullptr;
+  static LocoClass *_first;
+  LocoClass *_next = nullptr;
 
-  void _removeFromList(SlotClass *slot);
+  void _removeFromList(LocoClass *slot);
 };
 
 #endif

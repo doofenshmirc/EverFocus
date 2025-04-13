@@ -14,11 +14,11 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     void receivedLocoUpdate(Loco *loco) override;
     void receivedLocoBroadcast(int addr, int speed, Direction direction, int functionMap) override;
     void receivedSensorState(int addr, bool state);
-    void sendThrottle(uint16_t addr, uint8_t speed, uint8_t dir);
-    void sendFunctions(uint16_t addr, uint16_t functions, uint16_t funct_status);
-    void sendSwitch(uint16_t addr, uint8_t out, uint8_t dir);
-    void sendPower(uint8_t power);
-    void sendEmergencyStop();
+    void setThrottle(uint16_t addr, uint8_t speed, uint8_t dir);
+    void setFunctions(uint16_t addr, uint16_t functions, uint16_t funct_status);
+    void setSwitch(uint16_t addr, uint8_t out, uint8_t dir);
+    void setPower(uint8_t power);
+    void EmergencyStop();
     void check();
   private:
     DCCEXProtocol _dccex;    
