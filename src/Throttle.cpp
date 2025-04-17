@@ -1,5 +1,9 @@
 #include "Throttle.h"
 
+int target_speeds[] = TARGET_SPEEDS;
+int brake_delay_times[] = BRAKE_DELAY_TIMES;
+int accel_delay_times[] = ACCEL_DELAY_TIMES;
+
 ThrottleClass *ThrottleClass::_first = nullptr;
 
 ThrottleClass::ThrottleClass(LocoClass *loco) {
@@ -16,6 +20,10 @@ ThrottleClass::ThrottleClass(LocoClass *loco) {
   }
 }
 
+uint8_t ThrottleClass::getTargetSpeed() { 
+  return target_speeds[_throttle]; 
+}
+
 void ThrottleClass::incReverser() { 
   if ( _loco->getSpeed() == 0 && _reverser < 1) { _reverser++; }
 }
@@ -24,24 +32,69 @@ void ThrottleClass::decReverser() {
   if ( _loco->getSpeed() == 0 && _reverser > -1) { _reverser--; }
 }
 
-void ThrottleClass::incGear() {
-  if ( _brake < 0 ) { 
-    _brake++; 
-  } else if ( _throttle < 5 ) {
-    _throttle++;
+void ThrottleClass::incDrive() {
+  switch (_driveMode) {
+    case DriveMode::styleCab:
+      if ( _brake > 0 ) { 
+        _brake--; 
+      } else if (_throttle < (sizeof(target_speeds)/sizeof(target_speeds[0]))-1) {
+        _throttle++;
+      }
+      break;
+    case DriveMode::styleAC:
+      _loco->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      break;
+    
   }
 }
 
-void ThrottleClass::decGear() {
-  if ( _throttle > 0 ) { 
-    _throttle--; 
-  } else if ( _brake > -5 ) {
-    _brake--;
+void ThrottleClass::decDrive() {
+  switch (_driveMode) {
+    case DriveMode::styleCab:
+      if ( _throttle > 0 ) { 
+        _throttle--; 
+      } else if (_brake < (sizeof(brake_delay_times)/sizeof(brake_delay_times[0])-1)) {
+        _brake++;
+      }
+      break;
+    case DriveMode::styleAC:
+      _loco->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      break;
+    case DriveMode::styleDC:
+      _loco->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      break;
   }
 }
 
 void ThrottleClass::check() {
-  // Routine calls here included in the loop to read encoder or other inputs
+  int8_t changeAmount = 0;
+  switch (_driveMode) {
+    case DriveMode::styleCab:
+      if (_loco->getSpeed()!=target_speeds[_throttle]) {
+        if (_loco->getSpeed()<target_speeds[_throttle]) {  // need to accelerate
+          if (millis() - _speedChangeTime >= accel_delay_times[_throttle]) {
+            _speedChangeTime = millis();
+            changeAmount = 1 * SPEED_AMOUNT;
+            if (_loco->getSpeed()+changeAmount > target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_loco->getSpeed();  // only relevant if the speed change is greater that 1
+          }
+        }
+
+        if (_loco->getSpeed()>target_speeds[_throttle]) {  // need to brake
+          if (millis() - _speedChangeTime >= brake_delay_times[_brake]) {   // Check to see if the delay period has elasped.
+            changeAmount = -1 * SPEED_AMOUNT;
+            if (_loco->getSpeed()-changeAmount < target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_loco->getSpeed();  // only relevant if the speed change is greater that 1
+          }
+        }
+
+        if (changeAmount!=0) {  
+          _speedChangeTime = millis(); 
+          _loco->setSpeed(_loco->getSpeed()+changeAmount, SRC_THROTTLE);
+        }
+      } else { _speedChangeTime = -1; }
+      break;
+    case DriveMode::styleAC:
+      break;
+  }
 }
 
 ThrottleClass *ThrottleClass::getFirst() { return _first; }

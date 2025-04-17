@@ -4,8 +4,19 @@ LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, LCD_COLS, LCD_ROWS);
 LiquidCrystal_I2CAdapter lcdAdapter(&lcd);
 CharacterDisplayRenderer renderer(&lcdAdapter, LCD_COLS, LCD_ROWS);
 LcdMenu menu(renderer);
-SimpleRotary encoder(ROTARY_A, ROTARY_B, ROTARY_S);
-SimpleRotaryAdapter rotaryInput(&menu, &encoder);
+NewEncoder encoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, -20, 20, 0, FULL_PULSE);
+
+extern MenuScreen *settingsScreen;
+MENU_SCREEN(mainScreen, mainItems,
+  ITEM_BASIC("Start service"),
+  ITEM_BASIC("Connect to WiFi"),
+  ITEM_SUBMENU("Settings", settingsScreen),
+  ITEM_BASIC("Blink SOS"),
+  ITEM_BASIC("Blink random"));
+MENU_SCREEN(settingsScreen, settingsItems,
+    ITEM_BASIC("Backlight"),
+    ITEM_BASIC("Contrast"),
+    ITEM_BACK());
 
 CommandStationClass::CommandStationClass() {
 }
@@ -15,14 +26,25 @@ void CommandStationClass::init() {
   lcd.backlight();
   lcd.setCursor(0,0);
   lcd.print(CS_NAME);
+  delay(1000);
+
+  encoder.begin();
+
+  renderer.begin();
+  menu.setScreen(mainScreen);
+
+  _operationMode = OperationMode::Drive;
 
   //////Ez csak atmeneti a teszteles idejere amig nincs eeprom olvasas/////
-  _leftThrottle = addThrottle(19, "M61 019");
+  _leftThrottle = addThrottle(19, "M61 0191");
+  _leftThrottle->setDriveMode(DriveMode::styleCab);
+  _rightThrottle = addThrottle(3, "M41 2093");
+  _rightThrottle->setDriveMode(DriveMode::styleAC);
   /////////////////////////////////////////////////////////////////////////
 }
 
 uint16_t CommandStationClass::getLocoAddress(uint8_t id) {
-  LocoClass *loco = _getLocoById(id);
+  LocoClass *loco = getLocoById(id);
   
   if ( loco ) { return loco->getAddress(); }
 
@@ -30,7 +52,7 @@ uint16_t CommandStationClass::getLocoAddress(uint8_t id) {
 }
 
 LocoClass *CommandStationClass::addLoco(uint16_t addr, uint8_t id, const char *name) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
 
   if (!loco) { 
     loco = new LocoClass(addr, id, name); 
@@ -44,11 +66,9 @@ LocoClass *CommandStationClass::addLoco(uint16_t addr, uint8_t id, const char *n
   return loco;
 }
 
-  
-
 ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, const char *name) {
   LocoClass *loco = addLoco(addr, 0, name);
-  ThrottleClass *throttle = _getThrottleByAddress(addr);
+  ThrottleClass *throttle = getThrottleByAddress(addr);
 
   if (!throttle) { 
     throttle = new ThrottleClass(loco); 
@@ -58,7 +78,7 @@ ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, const char *name)
 }
 
 const char *CommandStationClass::getLocoName(uint16_t addr) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if (loco) { return loco->getName(); }
   
@@ -67,13 +87,13 @@ const char *CommandStationClass::getLocoName(uint16_t addr) {
 }
 
 void CommandStationClass::setLocoName(uint16_t addr, const char *name) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if (loco) { return loco->setName(name); }
 }
 
 uint8_t CommandStationClass::getLocoStatus(uint16_t addr) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if (loco) { return loco->getSlotStatus(); }
   
@@ -81,13 +101,13 @@ uint8_t CommandStationClass::getLocoStatus(uint16_t addr) {
 }
 
 void CommandStationClass::setLocoStatus(uint16_t addr, uint8_t status) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if (loco) { loco->setSlotStatus(status); }
 }
 
 uint8_t CommandStationClass::getLocoSpeed(uint16_t addr) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if ( loco ) { return loco->getSpeed(); }
 
@@ -95,13 +115,13 @@ uint8_t CommandStationClass::getLocoSpeed(uint16_t addr) {
 }
 
 void CommandStationClass::setLocoSpeed(uint16_t addr, uint8_t speed, uint8_t src) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if ( loco ) { loco->setSpeed(speed, src); }
 }
 
 uint8_t CommandStationClass::getLocoDirection(uint16_t addr) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if ( loco ) { return loco->getDirection(); }
 
@@ -109,13 +129,13 @@ uint8_t CommandStationClass::getLocoDirection(uint16_t addr) {
 }
 
 void CommandStationClass::setLocoDirection(uint16_t addr, uint8_t dir, uint8_t src) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if ( loco ) { loco->setDirection(dir, src); }
 }
 
 uint16_t CommandStationClass::getLocoFunctions(uint16_t addr) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
   
   if ( loco ) { return loco->getFunctions(); }
 
@@ -123,7 +143,7 @@ uint16_t CommandStationClass::getLocoFunctions(uint16_t addr) {
 }
 
 void CommandStationClass::setLocoFunctions(uint16_t addr, uint16_t functions, uint8_t src) {
-  LocoClass *loco = _getLocoByAddress(addr);
+  LocoClass *loco = getLocoByAddress(addr);
 
   if ( loco ) { loco->setFunctions(functions, src); }
 }
@@ -152,7 +172,25 @@ void CommandStationClass::EmergencyStop(uint8_t src) {
   if ( src != SRC_XPRESSNET ) XpressNetInterface.EmergencyStop();
 }
 
-void CommandStationClass::check() {
+void CommandStationClass::inputLoop() {
+  NewEncoder::EncoderState currentEncoderState;
+  encoder.getState(currentEncoderState);
+
+  switch ( currentEncoderState.currentClick ) {
+    case NewEncoder::DownClick:
+      if (_operationMode == OperationMode::Drive ) { _leftThrottle->decDrive(); _operationMode = OperationMode::Menu; break; }
+      if (_operationMode == OperationMode::Menu ) {  menu.process(DOWN); }
+      break;
+    case NewEncoder::UpClick:
+      if (_operationMode == OperationMode::Drive ) { _leftThrottle->incDrive(); }
+      if (_operationMode == OperationMode::Menu ) {  menu.process(UP); }
+      break;
+    case NewEncoder::NoClick:
+      break;
+  }
+}
+
+void CommandStationClass::interfacesLoop() {
   for (LocoClass *s = _locos->getFirst(); s; s = s->getNext()) {
     if ( s->getSourceStatus() != SRC_NULL ) {
       if ( s->getSourceStatus() != SRC_LOCONET ) {
@@ -177,30 +215,63 @@ void CommandStationClass::check() {
       s->setFunctionsStatus(SRC_NULL);
     }
   }
-  
-  byte i;
+}
 
-  // 0 = not turning, 1 = CW, 2 = CCW
-  i = encoder.rotate();
-  lcd.setCursor(0,0);
+void CommandStationClass::throttleLoop() {
+  for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) {
+    t->check();
+  }
+}
 
-  if ( i == 1 ) {
-    lcd.print("CW");
-    _leftThrottle->incReverser();
+void CommandStationClass::displayLoop() {
+  if ( _operationMode == OperationMode::Drive ) {
+    char dir;
+
+    menu.hide();
+
+    lcd.setCursor(0,0);
+    if (_leftThrottle) { 
+      _leftThrottle->getDirection() ? dir = char(126) : dir = char(127);
+      lcd.printf("%c%8s|", dir, _leftThrottle->getName()); 
+    } else lcd.printf("         |");
+    if (_rightThrottle) { 
+      _rightThrottle->getDirection() ? dir = char(126) : dir = char(127);
+      lcd.printf("%c%8s|", dir, _rightThrottle->getName()); 
+    } else lcd.printf("         |");
+
+    lcd.setCursor(0,1);
+    if (_leftThrottle) {
+      if ( _leftThrottle->getDriveMode() == DriveMode::styleAC ) {
+        lcd.printf("   %3d   |", _leftThrottle->getSpeed());
+      }
+      if ( _leftThrottle->getDriveMode() == DriveMode::styleCab ) {
+        lcd.printf("%1d %3d %3d|", _leftThrottle->getBrake(), _leftThrottle->getSpeed(), _leftThrottle->getTargetSpeed());
+      }
+    }
+    if (_rightThrottle) {
+      if ( _rightThrottle->getDriveMode() == DriveMode::styleAC ) {
+        lcd.printf("   %3d   |", _rightThrottle->getSpeed());
+      }
+      if ( _rightThrottle->getDriveMode() == DriveMode::styleCab ) {
+        lcd.printf("%1d %3d %3d|", _rightThrottle->getBrake(), _rightThrottle->getSpeed(), _rightThrottle->getTargetSpeed());
+      }
+    }
   }
 
-  if ( i == 2 ) {
-    lcd.print("CCW");
-    _leftThrottle->decReverser();
+  if ( _operationMode == OperationMode::Menu ) {
+    menu.show();
   }
-  
-  lcd.setCursor(0,1);
-  lcd.print(_leftThrottle->getReverser());
-  lcd.print("     ");
+}
+
+void CommandStationClass::check() {
+  inputLoop();
+  throttleLoop();
+  interfacesLoop();
+  displayLoop();
 }
 
 // private methods
-LocoClass *CommandStationClass::_getLocoByAddress(uint16_t addr) {
+LocoClass *CommandStationClass::getLocoByAddress(uint16_t addr) {
   for (LocoClass *s = _locos->getFirst(); s; s = s->getNext()) {
     if (s->getAddress() == addr) {
       return s;
@@ -208,7 +279,7 @@ LocoClass *CommandStationClass::_getLocoByAddress(uint16_t addr) {
   }
   return nullptr;
 }
-LocoClass *CommandStationClass::_getLocoById(uint8_t id) {
+LocoClass *CommandStationClass::getLocoById(uint8_t id) {
   for (LocoClass *s = _locos->getFirst(); s; s = s->getNext()) {
     if (s->getSlotId() == id) {
       return s;
@@ -217,7 +288,7 @@ LocoClass *CommandStationClass::_getLocoById(uint8_t id) {
   return nullptr;
 }
 
-ThrottleClass *CommandStationClass::_getThrottleByAddress(uint16_t addr) {
+ThrottleClass *CommandStationClass::getThrottleByAddress(uint16_t addr) {
   for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) {
     if (t->getAddress() == addr) {
       return t;

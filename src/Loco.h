@@ -53,6 +53,8 @@ public:
   
   uint8_t getSpeed() { return _speed; }
   void setSpeed(uint8_t speed, uint8_t src);
+  void incSpeed(uint8_t amount, uint8_t src);
+  void decSpeed(uint8_t amount, uint8_t src);
 
   uint8_t getDirection() { return _dir; }
   void setDirection(uint8_t dir, uint8_t src);

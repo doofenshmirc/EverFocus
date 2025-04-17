@@ -9,12 +9,17 @@
 #include <ItemSubMenu.h>
 #include <LcdMenu.h>
 #include <MenuScreen.h>
-#include <SimpleRotary.h>
 #include <display/LiquidCrystal_I2CAdapter.h>
-#include <input/SimpleRotaryAdapter.h>
 #include <renderer/CharacterDisplayRenderer.h>
+#include "LiquidCrystal_I2C.h"
+#include "NewEncoder.h"
 #include "config.h"
 #include "diag.h"
+
+enum OperationMode {
+  Drive = 0,
+  Menu = 1
+};
 
 class CommandStationClass {
   public:
@@ -51,18 +56,24 @@ class CommandStationClass {
     void setPower(uint8_t power, uint8_t src);
 
     void EmergencyStop(uint8_t src);
+    
+    void inputLoop();
+    void interfacesLoop();
+    void throttleLoop();
+    void displayLoop();
 
     void check();
 
   private:
+    OperationMode _operationMode = OperationMode::Drive;
     uint8_t _power;
     LocoClass *_locos = nullptr;
     ThrottleClass *_throttles = nullptr;
     ThrottleClass *_leftThrottle = nullptr;
     ThrottleClass *_rightThrottle = nullptr;
-    LocoClass *_getLocoById(uint8_t id);
-    LocoClass *_getLocoByAddress(uint16_t addr);
-    ThrottleClass *_getThrottleByAddress(uint16_t addr);
+    LocoClass *getLocoById(uint8_t id);
+    LocoClass *getLocoByAddress(uint16_t addr);
+    ThrottleClass *getThrottleByAddress(uint16_t addr);
 };
 
 extern CommandStationClass CommandStation;
