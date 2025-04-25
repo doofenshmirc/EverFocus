@@ -1,10 +1,23 @@
 #include "CommandStation.h"
 
+byte lcdLineChar[8] = {
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001
+};
+
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, LCD_COLS, LCD_ROWS);
 LiquidCrystal_I2CAdapter lcdAdapter(&lcd);
 CharacterDisplayRenderer renderer(&lcdAdapter, LCD_COLS, LCD_ROWS);
 LcdMenu menu(renderer);
 NewEncoder encoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, -20, 20, 0, FULL_PULSE);
+I2CKeyPad8x8 keyPad(0x20);
+uint32_t lastIndex = 64;
 
 extern MenuScreen *settingsScreen;
 MENU_SCREEN(mainScreen, mainItems,
@@ -24,6 +37,7 @@ CommandStationClass::CommandStationClass() {
 void CommandStationClass::init() {
   lcd.init();
   lcd.backlight();
+  lcd.createChar(2, lcdLineChar);
   lcd.setCursor(0,0);
   lcd.print(CS_NAME);
   delay(1000);
@@ -36,10 +50,10 @@ void CommandStationClass::init() {
   _operationMode = OperationMode::Drive;
 
   //////Ez csak atmeneti a teszteles idejere amig nincs eeprom olvasas/////
-  _leftThrottle = addThrottle(19, "M61 0191");
-  _leftThrottle->setDriveMode(DriveMode::styleCab);
   _rightThrottle = addThrottle(3, "M41 2093");
   _rightThrottle->setDriveMode(DriveMode::styleAC);
+  _leftThrottle = addThrottle(19, "M61 019");
+  _leftThrottle->setDriveMode(DriveMode::styleCab);
   /////////////////////////////////////////////////////////////////////////
 }
 
@@ -175,25 +189,165 @@ void CommandStationClass::EmergencyStop(uint8_t src) {
 void CommandStationClass::inputLoop() {
   NewEncoder::EncoderState currentEncoderState;
   encoder.getState(currentEncoderState);
+  uint8_t index = keyPad.getKey();
+  
+  if (_operationMode == OperationMode::Menu ) { 
+    switch ( currentEncoderState.currentClick ) {   //Encoder
+      case NewEncoder::DownClick:
+       // if (operationMode == OperationMode::Drive ) { _leftThrottle->decDrive(); }
+        menu.process(DOWN);
+        break;
+      case NewEncoder::UpClick:
+        // if (operationMode == OperationMode::Drive ) { _leftThrottle->incDrive(); }
+        menu.process(UP);
+        break;
+      case NewEncoder::NoClick:
+      break;
+    }
+  
+    if (lastIndex != index ) {
+      switch (index)                                //Keyboard
+      {
+        case 24:  //Menu
+          _operationMode = OperationMode::Drive;
+          break;
 
-  switch ( currentEncoderState.currentClick ) {
-    case NewEncoder::DownClick:
-      if (_operationMode == OperationMode::Drive ) { _leftThrottle->decDrive(); _operationMode = OperationMode::Menu; break; }
-      if (_operationMode == OperationMode::Menu ) {  menu.process(DOWN); }
+        case 25:  //Enter
+          menu.process(ENTER);
+          break;
+  
+        case 31:  //ESC
+          menu.process(BACK);
+          break;
+      
+        case 17:  //CLR
+          menu.process(BACKSPACE);
+          break;
+  
+        case 62:  //UP
+          menu.process(UP);
+          break;
+  
+        case 19:  //DOWN
+          menu.process(DOWN);
+          break;
+  
+        case 9:  //RIGHT
+          menu.process(RIGHT);
+          break;
+  
+        case 1:  //LEFT
+          menu.process(LEFT);
+          break;
+  
+        case 41:  //0
+          menu.process('0');
+          break;
+        
+        case 21:  //1
+          menu.process('1');
+          break;
+        
+        case 45:  //2
+          menu.process('2');
+          break;
+        
+        case 29:  //3
+          menu.process('3');
+          break;
+        
+        case 18:  //4
+          menu.process('4');
+          break;
+        
+        case 42:  //5
+          menu.process('5');
+          break;
+        
+        case 26:  //6
+          menu.process('6');
+          break;
+        
+        case 22:  //7
+          menu.process('7');
+          break;
+        
+        case 46:  //8
+          menu.process('8');
+          break;
+        
+        case 30:  //9
+          menu.process('9');
+          break;
+        
+        default:
+          break;
+      }
+    }
+  } else if (_operationMode == OperationMode::Drive ) {
+    switch ( currentEncoderState.currentClick ) {   //Encoder
+      case NewEncoder::DownClick:
+        _leftThrottle->decDrive();
+        break;
+      case NewEncoder::UpClick:
+        _leftThrottle->incDrive();
+        break;
+      case NewEncoder::NoClick:
       break;
-    case NewEncoder::UpClick:
-      if (_operationMode == OperationMode::Drive ) { _leftThrottle->incDrive(); }
-      if (_operationMode == OperationMode::Menu ) {  menu.process(UP); }
-      break;
-    case NewEncoder::NoClick:
-      break;
+    }
+    
+    if (lastIndex != index ) {
+      switch (index)                                //Keyboard
+      {
+        case 24:  //Menu
+          _operationMode = OperationMode::Menu;
+          break;
+ 
+        case 3:  //Track Auto
+          _leftThrottle->incReverser();
+          break;
+
+        case 5:  //Hold
+          _leftThrottle->decReverser();
+          break;
+
+        case 59:  //Iris+
+          _leftThrottle->incDrive();
+          break;
+
+        case 61:  //Iris-
+          _leftThrottle->decDrive();
+          break;
+
+        case 11:  //FocusF
+          _rightThrottle->incReverser();
+          break;
+
+        case 13:  //FocusN
+          _rightThrottle->decReverser();
+          break;
+
+        case 51:  //ZoomIn
+          _rightThrottle->incDrive();
+          break;
+
+        case 53:  //ZoomOut
+          _rightThrottle->decDrive();
+          break;
+
+        default:
+          break;
+      }
+    }
   }
+
+  lastIndex = index;
 }
 
 void CommandStationClass::interfacesLoop() {
   for (LocoClass *s = _locos->getFirst(); s; s = s->getNext()) {
     if ( s->getSourceStatus() != SRC_NULL ) {
-      if ( s->getSourceStatus() != SRC_LOCONET ) {
+      if ( s->getSourceStatus() != SRC_LOCONET && s->getSlotId() > 0 ) {
         if ( s->getSpeedStatus() ) LocoNetInterface.setSpeed(s->getSlotId(), s->getSpeed());
         if ( s->getDirectionStatus() || (s->getFunctionsStatus() & 0x1F)) LocoNetInterface.setDirFunct0to4(s->getSlotId(), s->getDirection(), s->getFunctions());
         if ( s->getFunctionsStatus() & 0x1E0) LocoNetInterface.setFunct5to8(s->getSlotId(), s->getFunctions());
@@ -225,37 +379,64 @@ void CommandStationClass::throttleLoop() {
 
 void CommandStationClass::displayLoop() {
   if ( _operationMode == OperationMode::Drive ) {
-    char dir;
+    char rev;
 
     menu.hide();
 
     lcd.setCursor(0,0);
-    if (_leftThrottle) { 
-      _leftThrottle->getDirection() ? dir = char(126) : dir = char(127);
-      lcd.printf("%c%8s|", dir, _leftThrottle->getName()); 
-    } else lcd.printf("         |");
-    if (_rightThrottle) { 
-      _rightThrottle->getDirection() ? dir = char(126) : dir = char(127);
-      lcd.printf("%c%8s|", dir, _rightThrottle->getName()); 
-    } else lcd.printf("         |");
+    if (_leftThrottle) lcd.printf("%-9s%c", _leftThrottle->getName(), byte(2)); 
+    else lcd.printf("         %c", byte(2));
+    if (_rightThrottle) lcd.printf(" %-9s", _rightThrottle->getName()); 
+    else lcd.printf("          ");
 
     lcd.setCursor(0,1);
     if (_leftThrottle) {
+      switch ( _leftThrottle->getReverser() ) {
+        case -1:
+          rev = char(0x7F);
+          break;
+        case 0:
+          rev = char(0xFD);
+          break;
+        case 1:
+          rev = char(0x7E);
+          break;
+      }
       if ( _leftThrottle->getDriveMode() == DriveMode::styleAC ) {
-        lcd.printf("   %3d   |", _leftThrottle->getSpeed());
+        lcd.printf("%c     %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
       }
       if ( _leftThrottle->getDriveMode() == DriveMode::styleCab ) {
-        lcd.printf("%1d %3d %3d|", _leftThrottle->getBrake(), _leftThrottle->getSpeed(), _leftThrottle->getTargetSpeed());
+        if ( _leftThrottle->getBrake() == 0 ) {
+          lcd.printf("%cT%-3d %3d%c", rev, _leftThrottle->getTargetSpeed(), _leftThrottle->getSpeed(), byte(2));
+        } else {
+          lcd.printf("%cB%-3d %3d%c", rev, _leftThrottle->getBrake(), _leftThrottle->getSpeed(), byte(2));
+        }
       }
-    }
+    } else lcd.printf("         %c", byte(2));
+
     if (_rightThrottle) {
+      switch ( _rightThrottle->getReverser() ) {
+        case -1:
+          rev = char(0x7F);
+          break;
+        case 0:
+          rev = char(0xFD);
+          break;
+        case 1:
+          rev = char(0x7E);
+          break;
+      }
       if ( _rightThrottle->getDriveMode() == DriveMode::styleAC ) {
-        lcd.printf("   %3d   |", _rightThrottle->getSpeed());
+        lcd.printf(" %c     %3d", rev, _rightThrottle->getSpeed());
       }
       if ( _rightThrottle->getDriveMode() == DriveMode::styleCab ) {
-        lcd.printf("%1d %3d %3d|", _rightThrottle->getBrake(), _rightThrottle->getSpeed(), _rightThrottle->getTargetSpeed());
+        if ( _rightThrottle->getBrake() == 0 ) {
+          lcd.printf(" %cT%-3d %3d", rev, _rightThrottle->getTargetSpeed(), _rightThrottle->getSpeed());
+        } else {
+          lcd.printf(" %cB%-3d %3d", rev, _rightThrottle->getBrake(), _rightThrottle->getSpeed());
+        }
       }
-    }
+    } else lcd.printf("          ");
   }
 
   if ( _operationMode == OperationMode::Menu ) {

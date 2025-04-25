@@ -13,6 +13,8 @@
 #include <renderer/CharacterDisplayRenderer.h>
 #include "LiquidCrystal_I2C.h"
 #include "NewEncoder.h"
+#include "Wire.h"
+#include "I2CKeyPad8x8.h"
 #include "config.h"
 #include "diag.h"
 

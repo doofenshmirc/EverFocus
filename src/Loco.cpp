@@ -38,7 +38,7 @@ void LocoClass::setSpeed(uint8_t speed, uint8_t src) {
 }
 
 void LocoClass::incSpeed(uint8_t amount, uint8_t src) {
-  if ( _speed + amount < 127 ) { 
+  if ( _speed + amount <= 127 ) { 
     setSpeedStatus(SLOT_SPEED_BIT);
     setSourceStatus(src);
     _speed=_speed + amount; 
@@ -48,7 +48,7 @@ void LocoClass::incSpeed(uint8_t amount, uint8_t src) {
 
 void LocoClass::decSpeed(uint8_t amount, uint8_t src) {
 
-  if ( _speed - amount > 0 ) { 
+  if ( _speed - amount >= 0 ) { 
     setSpeedStatus(SLOT_SPEED_BIT);
     setSourceStatus(src);
     _speed=_speed - amount; 

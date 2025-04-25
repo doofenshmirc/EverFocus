@@ -25,42 +25,46 @@ uint8_t ThrottleClass::getTargetSpeed() {
 }
 
 void ThrottleClass::incReverser() { 
-  if ( _loco->getSpeed() == 0 && _reverser < 1) { _reverser++; }
+  if ( _reverser == -1 ) {
+    _reverser = 0;
+    _throttle = 0;
+  } else if ( _reverser == 0 && _loco->getSpeed() == 0 ) { 
+    _reverser = 1; 
+    _loco->setDirection(1, SRC_THROTTLE);
+  }
 }
 
 void ThrottleClass::decReverser() { 
-  if ( _loco->getSpeed() == 0 && _reverser > -1) { _reverser--; }
+  if ( _reverser == 1 ) {
+    _reverser = 0;
+    _throttle = 0;
+  } else if ( _reverser == 0 && _loco->getSpeed() == 0 ) { 
+    _reverser = -1; 
+    _loco->setDirection(0, SRC_THROTTLE);
+  }  
 }
 
 void ThrottleClass::incDrive() {
   switch (_driveMode) {
     case DriveMode::styleCab:
-      if ( _brake > 0 ) { 
-        _brake--; 
-      } else if (_throttle < (sizeof(target_speeds)/sizeof(target_speeds[0]))-1) {
-        _throttle++;
-      }
+      if ( _brake > 0 ) _brake--; 
+      else if ( (_throttle < (sizeof(target_speeds)/sizeof(target_speeds[0]))-1) && _reverser != 0) _throttle++;
       break;
     case DriveMode::styleAC:
-      _loco->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      if ( _reverser != 0) _loco->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
       break;
-    
   }
 }
 
 void ThrottleClass::decDrive() {
   switch (_driveMode) {
     case DriveMode::styleCab:
-      if ( _throttle > 0 ) { 
-        _throttle--; 
-      } else if (_brake < (sizeof(brake_delay_times)/sizeof(brake_delay_times[0])-1)) {
+      if ( _throttle > 0 ) _throttle--; 
+      else if (_brake < (sizeof(brake_delay_times)/sizeof(brake_delay_times[0])-1)) {
         _brake++;
       }
       break;
     case DriveMode::styleAC:
-      _loco->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
-      break;
-    case DriveMode::styleDC:
       _loco->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
       break;
   }
