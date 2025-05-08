@@ -1,26 +1,32 @@
-#pragma once
+#ifndef Throttle_h
+#define Throttle_h
 
 #include "Arduino.h"
+#include "Slot.h"
 #include "Loco.h"
 #include "config.h"
-//#include "diag.h"
 
 enum DriveMode {
-  styleAC = 0,
-  styleDC = 1,
-  styleCab = 2
-};
+  drvAC = 0,
+  drvDC = 1,
+  drvCAB = 2
+};  
 
 class ThrottleClass {
   public:
-    ThrottleClass(LocoClass *loco);
+    ThrottleClass(SlotClass *slot, LocoClass *loco, DriveMode driveMode, uint8_t button);
 
-    uint16_t getAddress() { return _loco->getAddress(); }
-    uint8_t getSpeed() { return _loco->getSpeed(); }
+    uint8_t getButton() { return _button; }
+    void setButton(uint8_t button) { _button = button; }
+
+    LocoClass* getLoco() { return _loco; }
+    void setLoco(LocoClass* loco) { _loco = loco; }
+
+    uint16_t getAddress() { return _slot->getAddress(); }
+    uint8_t getSpeed() { return _slot->getSpeed(); }
     uint8_t getTargetSpeed();
-    uint8_t getDirection() { return _loco->getDirection(); }
+    uint8_t getDirection() { return _slot->getDirection(); }
     const char *getName() { return _loco->getName(); }
-    DriveMode getDriveMode() { return _driveMode; }
 
     int8_t getReverser() { return _reverser; }
     void incReverser();
@@ -31,6 +37,7 @@ class ThrottleClass {
     void incDrive();
     void decDrive();
 
+    DriveMode getDriveMode() { return _driveMode; }
     void setDriveMode(DriveMode driveMode) { _driveMode = driveMode; }
 
     double getSpeedChangeTime() { return _speedChangeTime; }
@@ -55,6 +62,8 @@ class ThrottleClass {
   /// @return Pointer to the turnout object or nullptr if not found
     static ThrottleClass *getByAddress(uint16_t addr);
 
+    static ThrottleClass *getByButton(uint8_t button);
+
   /// @brief Clear the list of turnouts
     static void clearThrottleList();
 
@@ -62,11 +71,13 @@ class ThrottleClass {
     ~ThrottleClass();
 
   private:
+    SlotClass *_slot;
     LocoClass *_loco;
-    DriveMode _driveMode = DriveMode::styleCab;
+    DriveMode _driveMode = DriveMode::drvCAB;
     int8_t _brake = 0;
     int8_t _throttle = 0;
     int8_t _reverser = 0;
+    uint8_t _button = 0;
     static ThrottleClass *_first;
     ThrottleClass *_next = nullptr;
     double _speedChangeTime = -1;
@@ -76,3 +87,5 @@ class ThrottleClass {
     /// @param throttle Pointer to the throttle to remove
     void _removeFromList(ThrottleClass *throttle);
 };
+
+#endif

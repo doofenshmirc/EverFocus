@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LocoNetSerial_h
+#define LocoNetSerial_h
 
 #include <LocoNet.h>
 #include <Stream.h>
@@ -39,3 +40,5 @@ private:
     LocoNetMessageBuffer buf;
 
 };
+
+#endif

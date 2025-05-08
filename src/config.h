@@ -1,9 +1,13 @@
-#define CS_NAME "EverFocus CommandStation"
+#define CS_NAME "     EverFocus"
 #define LCD_ROWS 2
 #define LCD_COLS 20
-#define ROTARY_ENCODER_A_PIN 15
-#define ROTARY_ENCODER_B_PIN 4
-#define ROTARY_ENCODER_BUTTON_PIN 2
+#define ENCODER_CLK_PIN 15
+#define ENCODER_DT_PIN 4
+#define ENCODER_SW1_PIN 32
+#define ENCODER_SW2_PIN 33
+#define ENCODER_SW3_PIN 27
+#define ENCODER_SWD_PIN 35
+#define MAX_SLOT_NUM 127
 #define DEBUG_EVERFOCUS
 
 //DCCEX Interface
@@ -30,5 +34,4 @@
 #define ACCEL_DELAY_TIMES {1000, 600, 550, 500, 450, 400, 350, 300, 250};   //ms
 #define BRAKE_DELAY_TIMES {1000, 500, 200, 125, 50, 25, 1};   //ms
 #define SPEED_AMOUNT 1
-
 

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XpressNetInterface_h
+#define XpressNetInterface_h
 
 #include <XpressNetMaster.h>
 #include "CommandStation.h"
@@ -18,3 +19,5 @@ class XpressNetInterfaceClass : public XpressNetMasterClass {
 };
 
 extern XpressNetInterfaceClass XpressNetInterface;
+
+#endif

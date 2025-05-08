@@ -130,9 +130,10 @@ class ItemInput : public MenuItem {
             }
             switch (command) {
                 case ENTER:
-                    back(renderer);
+                    enter(renderer);
                     return true;
                 case BACK:
+                    back(renderer);
                     return true;
                 case UP:
                     return true;
@@ -275,9 +276,10 @@ class ItemInput : public MenuItem {
         } else {
             concat(value, character, buf);
         }
-
-        if ( length > 0 ) { delete[] value; }
-        value = buf;
+        strcpy(value, buf);
+        delete[] buf;
+//        delete[] value;
+//        value = buf;
         cursor++;
         uint8_t viewSize = getViewSize(renderer);
         if (cursor > (view + viewSize - 1)) {

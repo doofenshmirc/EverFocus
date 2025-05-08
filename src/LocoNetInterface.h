@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LocoNetInterface_h
+#define LocoNetInterface_h
 
 #include "LocoNetSerial.h"
 #include <LocoNetESP32.h>
@@ -20,3 +21,5 @@ class LocoNetInterfaceClass : public LocoNetDispatcher {
 };
 
 extern LocoNetInterfaceClass LocoNetInterface;
+
+#endif

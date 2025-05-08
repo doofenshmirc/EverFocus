@@ -47,8 +47,7 @@ void LocoNetInterfaceClass::EmergencyStop() {
 
 void LocoNetInterfaceClass::processPacket(const LnMsg *packet) {
   uint16_t addr;
-  uint8_t slotId;
-  LocoClass *loco;
+  SlotClass *slot;
   char tmp[100];
   
   formatMsg(*packet, tmp, sizeof(tmp));
@@ -70,52 +69,51 @@ void LocoNetInterfaceClass::processPacket(const LnMsg *packet) {
     case OPC_WR_SL_DATA:
     case OPC_SL_RD_DATA:
       addr = ((uint16_t)packet->sd.adr2 << 7) + packet->sd.adr;
-      loco = CommandStation.addLoco(addr, packet->sd.slot, "NONAME");
-      slotId = loco->getSlotId();
-      DIAG("LocoNetInterfaceClass::processMessage OPC_SL_RD_DATA addr:%u, id:%u\n", addr, slotId);
+      slot = CommandStation.addSlot(addr, packet->sd.slot);
+      DIAG("LocoNetInterfaceClass::processMessage OPC_SL_RD_DATA addr:%u, id:%u\n", addr, slot->getId());
 
-      if ( slotId > 0 && slotId < 128 ) {
-        CommandStation.setLocoSpeed(addr, packet->sd.spd, SRC_LOCONET);
-        CommandStation.setLocoDirection(addr, (Direction)((packet->sd.dirf & 0x20) >> 5), SRC_LOCONET);
-        CommandStation.setLocoFunctions(addr, (CommandStation.getLocoFunctions(addr) & 0xFE00) | (((uint16_t)packet->sd.snd & 0x0F) << 5 ) | (((uint16_t)packet->sd.dirf & 0xF) << 1) | (((uint16_t)packet->sd.dirf & 0x10) >> 4), SRC_LOCONET);
+      if ( slot->getId() > 0 && slot->getId() < MAX_SLOT_NUM ) {
+        CommandStation.setSlotSpeed(addr, packet->sd.spd, SRC_LOCONET);
+        CommandStation.setSlotDirection(addr, (Direction)((packet->sd.dirf & 0x20) >> 5), SRC_LOCONET);
+        CommandStation.setSlotFunctions(addr, (CommandStation.getSlotFunctions(addr) & 0xFE00) | (((uint16_t)packet->sd.snd & 0x0F) << 5 ) | (((uint16_t)packet->sd.dirf & 0xF) << 1) | (((uint16_t)packet->sd.dirf & 0x10) >> 4), SRC_LOCONET);
         
       }
       break;
 
     case OPC_LOCO_SPD:
-      addr = CommandStation.getLocoAddress(packet->ld.slot);
+      addr = CommandStation.getSlotAddress(packet->ld.slot);
       DIAG("LocoNetInterfaceClass::processMessage OPC_LOCO_SPD addr:%u, speed:%u\n", addr, packet->ld.data);
 
       if ( addr > 0 ) {  
-        CommandStation.setLocoSpeed(addr, packet->ld.data, SRC_LOCONET);
+        CommandStation.setSlotSpeed(addr, packet->ld.data, SRC_LOCONET);
       } else send(OPC_RQ_SL_DATA, packet->ld.slot, 0);
       break;
 
     case OPC_LOCO_DIRF:
-      addr = CommandStation.getLocoAddress(packet->ld.slot);
+      addr = CommandStation.getSlotAddress(packet->ld.slot);
       DIAG("LocoNetInterfaceClass::processMessage OPC_LOCO_DIRF addr:%u, dirf:%u\n", addr, packet->ld.data);
 
       if ( addr > 0 ) { 
-        CommandStation.setLocoDirection(addr, ((packet->ld.data & 0x20) >> 5), SRC_LOCONET);
-        CommandStation.setLocoFunctions(addr, (CommandStation.getLocoFunctions(addr) & 0xFFE0) | (((uint16_t)packet->ld.data & 0xF) << 1) | (((uint16_t)packet->ld.data & 0x10) >> 4), SRC_LOCONET);
+        CommandStation.setSlotDirection(addr, ((packet->ld.data & 0x20) >> 5), SRC_LOCONET);
+        CommandStation.setSlotFunctions(addr, (CommandStation.getSlotFunctions(addr) & 0xFFE0) | (((uint16_t)packet->ld.data & 0xF) << 1) | (((uint16_t)packet->ld.data & 0x10) >> 4), SRC_LOCONET);
       } else send(OPC_RQ_SL_DATA, packet->ld.slot, 0);
       break;
 
     case OPC_LOCO_SND:
-      addr = CommandStation.getLocoAddress(packet->ld.slot);
+      addr = CommandStation.getSlotAddress(packet->ld.slot);
       DIAG("LocoNetInterfaceClass::processMessage OPC_LOCO_SND addr:%u, snd:%u\n", addr, packet->ld.data);
 
       if ( addr > 0 ) {
-        if ( CommandStation.setLocoFunctions(addr, (CommandStation.getLocoFunctions(addr) &0xFE1F ) | ((uint16_t)packet->ld.data << 5), SRC_LOCONET), SRC_LOCONET);
+        if ( CommandStation.setSlotFunctions(addr, (CommandStation.getSlotFunctions(addr) &0xFE1F ) | ((uint16_t)packet->ld.data << 5), SRC_LOCONET), SRC_LOCONET);
       } else send(OPC_RQ_SL_DATA, packet->ld.slot, 0);
       break;
 
     case OPC_SLOT_STAT1:
-      addr = CommandStation.getLocoAddress(packet->ld.slot);
+      addr = CommandStation.getSlotAddress(packet->ld.slot);
       DIAG("LocoNetInterfaceClass::processMessage OPC_SLOT_STAT1 addr:%u, snd:%u\n", addr, packet->ld.data);
 
       if ( addr > 0 ) {
-        CommandStation.setLocoStatus(addr, packet->ld.data);
+        CommandStation.setSlotStatus(addr, packet->ld.data);
       } else send(OPC_RQ_SL_DATA, packet->ld.slot, 0);
       break;
     
@@ -127,7 +125,7 @@ void LocoNetInterfaceClass::processPacket(const LnMsg *packet) {
       break;  
 
     default:
-        DIAG("# !! Ignore LocoNet message !! #\n");      
+        DIAG("Ignore LocoNet message\n");      
         break;
   }
 }

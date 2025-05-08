@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef diag_h
 #define diag_h
 

@@ -6,8 +6,11 @@ int accel_delay_times[] = ACCEL_DELAY_TIMES;
 
 ThrottleClass *ThrottleClass::_first = nullptr;
 
-ThrottleClass::ThrottleClass(LocoClass *loco) {
+ThrottleClass::ThrottleClass(SlotClass *slot, LocoClass *loco, DriveMode driveMode, uint8_t button) {
+  _slot = slot;
   _loco = loco;
+  _driveMode = driveMode;
+  _button = button;
  
   if (!_first) {
     _first = this;
@@ -28,9 +31,9 @@ void ThrottleClass::incReverser() {
   if ( _reverser == -1 ) {
     _reverser = 0;
     _throttle = 0;
-  } else if ( _reverser == 0 && _loco->getSpeed() == 0 ) { 
+  } else if ( _reverser == 0 && _slot->getSpeed() == 0 ) { 
     _reverser = 1; 
-    _loco->setDirection(1, SRC_THROTTLE);
+    _slot->setDirection(1, SRC_THROTTLE);
   }
 }
 
@@ -38,34 +41,34 @@ void ThrottleClass::decReverser() {
   if ( _reverser == 1 ) {
     _reverser = 0;
     _throttle = 0;
-  } else if ( _reverser == 0 && _loco->getSpeed() == 0 ) { 
+  } else if ( _reverser == 0 && _slot->getSpeed() == 0 ) { 
     _reverser = -1; 
-    _loco->setDirection(0, SRC_THROTTLE);
+    _slot->setDirection(0, SRC_THROTTLE);
   }  
 }
 
 void ThrottleClass::incDrive() {
   switch (_driveMode) {
-    case DriveMode::styleCab:
+    case DriveMode::drvCAB:
       if ( _brake > 0 ) _brake--; 
       else if ( (_throttle < (sizeof(target_speeds)/sizeof(target_speeds[0]))-1) && _reverser != 0) _throttle++;
       break;
-    case DriveMode::styleAC:
-      if ( _reverser != 0) _loco->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+    case DriveMode::drvAC:
+      if ( _reverser != 0) _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
       break;
   }
 }
 
 void ThrottleClass::decDrive() {
   switch (_driveMode) {
-    case DriveMode::styleCab:
+    case DriveMode::drvCAB:
       if ( _throttle > 0 ) _throttle--; 
       else if (_brake < (sizeof(brake_delay_times)/sizeof(brake_delay_times[0])-1)) {
         _brake++;
       }
       break;
-    case DriveMode::styleAC:
-      _loco->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+    case DriveMode::drvAC:
+      _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
       break;
   }
 }
@@ -73,30 +76,30 @@ void ThrottleClass::decDrive() {
 void ThrottleClass::check() {
   int8_t changeAmount = 0;
   switch (_driveMode) {
-    case DriveMode::styleCab:
-      if (_loco->getSpeed()!=target_speeds[_throttle]) {
-        if (_loco->getSpeed()<target_speeds[_throttle]) {  // need to accelerate
+    case DriveMode::drvCAB:
+      if (_slot->getSpeed()!=target_speeds[_throttle]) {
+        if (_slot->getSpeed()<target_speeds[_throttle]) {  // need to accelerate
           if (millis() - _speedChangeTime >= accel_delay_times[_throttle]) {
             _speedChangeTime = millis();
             changeAmount = 1 * SPEED_AMOUNT;
-            if (_loco->getSpeed()+changeAmount > target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_loco->getSpeed();  // only relevant if the speed change is greater that 1
+            if (_slot->getSpeed()+changeAmount > target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_slot->getSpeed();  // only relevant if the speed change is greater that 1
           }
         }
 
-        if (_loco->getSpeed()>target_speeds[_throttle]) {  // need to brake
+        if (_slot->getSpeed()>target_speeds[_throttle]) {  // need to brake
           if (millis() - _speedChangeTime >= brake_delay_times[_brake]) {   // Check to see if the delay period has elasped.
             changeAmount = -1 * SPEED_AMOUNT;
-            if (_loco->getSpeed()-changeAmount < target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_loco->getSpeed();  // only relevant if the speed change is greater that 1
+            if (_slot->getSpeed()-changeAmount < target_speeds[_throttle]) changeAmount = target_speeds[_throttle]-_slot->getSpeed();  // only relevant if the speed change is greater that 1
           }
         }
 
         if (changeAmount!=0) {  
           _speedChangeTime = millis(); 
-          _loco->setSpeed(_loco->getSpeed()+changeAmount, SRC_THROTTLE);
+          _slot->setSpeed(_slot->getSpeed()+changeAmount, SRC_THROTTLE);
         }
       } else { _speedChangeTime = -1; }
       break;
-    case DriveMode::styleAC:
+    case DriveMode::drvAC:
       break;
   }
 }
@@ -110,6 +113,15 @@ ThrottleClass *ThrottleClass::getNext() { return _next; }
 ThrottleClass *ThrottleClass::getByAddress(uint16_t addr) {
   for (ThrottleClass *t = ThrottleClass::getFirst(); t; t = t->getNext()) {
     if (t->getAddress() == addr) {
+      return t;
+    }
+  }
+  return nullptr;
+}
+
+ThrottleClass *ThrottleClass::getByButton(uint8_t button) {
+  for (ThrottleClass *t = ThrottleClass::getFirst(); t; t = t->getNext()) {
+    if (t->getButton() == button) {
       return t;
     }
   }

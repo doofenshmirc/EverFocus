@@ -2,9 +2,8 @@
 
 LocoClass *LocoClass::_first = nullptr;
 
-LocoClass::LocoClass(uint16_t addr, uint8_t slot_id, const char *name) {
-  _slot_id = slot_id;
-  _addr = addr;
+LocoClass::LocoClass(uint16_t addr, const char* name) {
+  setAddress(addr);
   setName(name);
 
   if (!_first) {
@@ -26,51 +25,6 @@ void LocoClass::setName(const char *name) {
   int nameLength = strlen(name);
   _name = new char[nameLength + 1];
   strcpy(_name, name);
-}
-
-
-void LocoClass::setSpeed(uint8_t speed, uint8_t src) {
-  if ( _speed != speed) {
-    setSpeedStatus(SLOT_SPEED_BIT);
-    setSourceStatus(src);
-    _speed = speed;
-  }
-}
-
-void LocoClass::incSpeed(uint8_t amount, uint8_t src) {
-  if ( _speed + amount <= 127 ) { 
-    setSpeedStatus(SLOT_SPEED_BIT);
-    setSourceStatus(src);
-    _speed=_speed + amount; 
-  }
-  else { _speed = 127; }
-}
-
-void LocoClass::decSpeed(uint8_t amount, uint8_t src) {
-
-  if ( _speed - amount >= 0 ) { 
-    setSpeedStatus(SLOT_SPEED_BIT);
-    setSourceStatus(src);
-    _speed=_speed - amount; 
-  }
-  else { _speed = 0; }
-}
-
-void LocoClass::setDirection(uint8_t dir, uint8_t src) {
-  if ( _dir != dir) {
-    setDirectionStatus(SLOT_DIR_BIT);
-    setSourceStatus(src);
-    _dir = dir;
-  }
-}
-
-void LocoClass::setFunctions(uint16_t functions, uint8_t src) {
-  if ( _functions != functions) {
-    if (getSlotStatus() == SLOT_STAT_INIT) setFunctionsStatus(0xFFFF);
-    else setFunctionsStatus(_functions ^ functions);
-    setSourceStatus(src);
-    _functions = functions;
-  }
 }
 
 LocoClass *LocoClass::getFirst() { return _first; }
@@ -103,3 +57,4 @@ void LocoClass::_removeFromList(LocoClass *loco) {
     }
   }
 }
+  

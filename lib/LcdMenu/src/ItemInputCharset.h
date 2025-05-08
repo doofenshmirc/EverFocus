@@ -137,7 +137,9 @@ class ItemInputCharset : public ItemInput {
         } else {
             char* buf = new char[length + 2];
             concat(value, charset[charsetPosition], buf);
-            value = buf;
+            strcpy(value, buf);
+            delete[] buf;
+//            value = buf;
         }
         abortCharEdit(renderer);
         LOG(F("ItemInputCharset::commitCharEdit"), charset[charsetPosition]);
