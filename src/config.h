@@ -1,4 +1,4 @@
-#define CS_NAME   "     EverFocus"
+#define CS_NAME         "EverFocus"
 #define LCD_ROWS        2
 #define LCD_COLS        20
 #define ENCODER_CLK_PIN 15

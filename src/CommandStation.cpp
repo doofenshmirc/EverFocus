@@ -1,5 +1,7 @@
 #include "CommandStation.h"
 
+#define VERSION "v1.0.0"
+
 byte lcdLineChar[8] = {
   B00001,
   B00001,
@@ -115,11 +117,13 @@ void CommandStationClass::init() {
   lcd.init();
   lcd.backlight();
   lcd.createChar(2, lcdLineChar);
-  lcd.print(CS_NAME);
+  lcd.setCursor(0, 0);
+  lcd.printf("  %s %s", CS_NAME, VERSION);
   delay(1000);
   
   encoder.begin();
   renderer.begin();
+  menu.setScreen(mainMenuScreen);
 
   //////Ez csak atmeneti a teszteles idejere amig nincs eeprom olvasas/////
   addLoco(2093, "M41 002");
@@ -131,9 +135,6 @@ void CommandStationClass::init() {
   addThrottle(219, DriveMode::drvDC, 0);
   addThrottle(1119, DriveMode::drvCAB, 56);
   /////////////////////////////////////////////////////////////////////////
-  
-  menu.setScreen(mainMenuScreen);
-   
 }
 
 void CommandStationClass::updateLocoMenu() {
@@ -269,7 +270,7 @@ ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, uint8_t driveMode
   SlotClass *slot = addSlot(addr, 0);
   LocoClass *loco = getLocoByAddress(addr); 
   ThrottleClass *throttle = getThrottleByAddress(addr);
-  Serial.printf("addThrottle addr=%d drive=%d button=%d\n", addr, driveMode, button);
+
   if (!throttle) { 
     throttle = new ThrottleClass(slot, loco, driveMode, button); 
   } else {
@@ -502,13 +503,12 @@ void CommandStationClass::inputLoop() {
       }
     }
   } else if (_operationMode == OperationMode::opDrive ) {
-
     switch ( currentEncoderState.currentClick ) {   //Encoder rotary
       case NewEncoder::DownClick:
-        _leftThrottle->decDrive();
+        if (_leftThrottle) _leftThrottle->decDrive();
         break;
       case NewEncoder::UpClick:
-        _leftThrottle->incDrive();
+        if (_leftThrottle) _leftThrottle->incDrive();
         break;
       case NewEncoder::NoClick:
       break;
@@ -516,10 +516,10 @@ void CommandStationClass::inputLoop() {
 
     switch ( currentEncoderState.currentButton ) {   //Encoder button
       case NewEncoder::DownButton:
-        _leftThrottle->decReverser();
+        if (_leftThrottle) _leftThrottle->decReverser();
         break;
       case NewEncoder::UpButton:
-        _leftThrottle->incReverser();
+        if (_leftThrottle) _leftThrottle->incReverser();
         break;
       case NewEncoder::NoButton:
       break;
@@ -548,28 +548,28 @@ void CommandStationClass::inputLoop() {
           _leftThrottle = getThrottleByButton(index);
           break;
         case BTN_FOCUSN:
-          _leftThrottle->incReverser();
+          if (_leftThrottle) _leftThrottle->incReverser();
           break;
         case BTN_HOLD:
-          _leftThrottle->decReverser();
+          if (_leftThrottle) _leftThrottle->decReverser();
           break;
         case BTN_IRIS1:
-          _leftThrottle->incDrive();
+          if (_leftThrottle) _leftThrottle->incDrive();
           break;
         case BTN_IRIS2:
-          _leftThrottle->decDrive();
+          if (_leftThrottle) _leftThrottle->decDrive();
           break;
         case BTN_AUTO:
-          _leftThrottle->chgFunction(0);
+          if (_leftThrottle) _leftThrottle->chgFunction(0);
           break;
         case BTN_FOCUSF:
-          _leftThrottle->chgFunction(1);
+          if (_leftThrottle) _leftThrottle->chgFunction(1);
           break;
-          case BTN_ZOOMIN:
-          _leftThrottle->chgFunction(2);
+        case BTN_ZOOMIN:
+          if (_leftThrottle) _leftThrottle->chgFunction(2);
           break;
-          case BTN_ZOOMOUT:
-          _leftThrottle->chgFunction(3);
+        case BTN_ZOOMOUT:
+          if (_leftThrottle) _leftThrottle->chgFunction(3);
           break;
 
         case BTN_REC:
@@ -588,31 +588,31 @@ void CommandStationClass::inputLoop() {
           _rightThrottle = getThrottleByButton(index);
           break;
         case BTN_HOME:
-          _rightThrottle->incReverser();
+          if (_rightThrottle) _rightThrottle->incReverser();
           break;
         case BTN_STOP2:
-          _rightThrottle->decReverser();
+          if (_rightThrottle) _rightThrottle->decReverser();
           break;
         case BTN_TOUR:
-          _rightThrottle->incDrive();
+          if (_rightThrottle) _rightThrottle->incDrive();
           break;
         case BTN_SET:
-          _rightThrottle->decDrive();
+          if (_rightThrottle) _rightThrottle->decDrive();
           break;
         case BTN_POSITION:
-          _rightThrottle->chgFunction(0);
+          if (_rightThrottle) _rightThrottle->chgFunction(0);
           break;
         case BTN_F1:
-          _rightThrottle->chgFunction(1);
+          if (_rightThrottle) _rightThrottle->chgFunction(1);
           break;
         case BTN_F2:
-          _rightThrottle->chgFunction(2);
+          if (_rightThrottle) _rightThrottle->chgFunction(2);
           break;
         case BTN_F3:
-          _rightThrottle->chgFunction(3);
+          if (_rightThrottle) _rightThrottle->chgFunction(3);
           break;
         case BTN_F4:
-          _rightThrottle->chgFunction(4);
+          if (_rightThrottle) _rightThrottle->chgFunction(4);
           break;
         case BTN_SHIFT:
           _operationMode = OperationMode::opFunction;
@@ -631,6 +631,66 @@ void CommandStationClass::inputLoop() {
       switch (index) {
         case BTN_SHIFT:
           _operationMode = OperationMode::opDrive;
+          break;
+        case BTN_DISPLAY:
+          if (_leftThrottle) _leftThrottle->chgFunction(0);
+          break;
+        case BTN_SELECT:
+          if (_leftThrottle) _leftThrottle->chgFunction(1);
+          break;
+        case BTN_MODE:
+          if (_leftThrottle) _leftThrottle->chgFunction(2);
+          break;
+        case BTN_ZOOM:
+          if (_leftThrottle) _leftThrottle->chgFunction(3);
+          break;
+        case BTN_SEQ:
+          if (_leftThrottle) _leftThrottle->chgFunction(4);
+          break;
+        case BTN_SEARCH:
+          if (_leftThrottle) _leftThrottle->chgFunction(5);
+          break;
+        case BTN_AUTO:
+          if (_leftThrottle) _leftThrottle->chgFunction(6);
+          break;
+        case BTN_IRIS1:
+          if (_leftThrottle) _leftThrottle->chgFunction(7);
+          break;
+        case BTN_FOCUSF:
+          if (_leftThrottle) _leftThrottle->chgFunction(8);
+          break;
+        case BTN_ZOOMIN:
+          if (_leftThrottle) _leftThrottle->chgFunction(9);
+          break;
+        case BTN_REC:
+          if (_rightThrottle) _rightThrottle->chgFunction(0);
+          break;
+        case BTN_STOP:
+          if (_rightThrottle) _rightThrottle->chgFunction(1);
+          break;
+        case BTN_PLAY:
+          if (_rightThrottle) _rightThrottle->chgFunction(2);
+          break;
+        case BTN_PAUSE:
+          if (_rightThrottle) _rightThrottle->chgFunction(3);
+          break;
+        case BTN_COPY:
+          if (_rightThrottle) _rightThrottle->chgFunction(4);
+          break;
+        case BTN_CALL:
+          if (_rightThrottle) _rightThrottle->chgFunction(5);
+          break;
+        case BTN_HOLD:
+          if (_rightThrottle) _rightThrottle->chgFunction(6);
+          break;
+        case BTN_IRIS2:
+          if (_rightThrottle) _rightThrottle->chgFunction(7);
+          break;
+        case BTN_FOCUSN:
+          if (_rightThrottle) _rightThrottle->chgFunction(8);
+          break;
+        case BTN_ZOOMOUT:
+          if (_rightThrottle) _rightThrottle->chgFunction(9);
           break;
       }
     }
@@ -674,8 +734,6 @@ void CommandStationClass::throttleLoop() {
 
 void CommandStationClass::displayLoop() {
   if ( _operationMode == OperationMode::opDrive ) {
-    char rev;
-
     menu.hide();
 
     lcd.setCursor(0,0);
@@ -686,6 +744,7 @@ void CommandStationClass::displayLoop() {
 
     lcd.setCursor(0,1);
     if (_leftThrottle) {
+      char rev;
       switch ( _leftThrottle->getReverser() ) {
         case -1:
           rev = char(0x7F);
@@ -712,6 +771,7 @@ void CommandStationClass::displayLoop() {
       }
     } else lcd.printf("         %c", byte(2));
     if (_rightThrottle) {
+      char rev;
       switch ( _rightThrottle->getReverser() ) {
         case -1:
           rev = char(0x7F);
@@ -739,6 +799,7 @@ void CommandStationClass::displayLoop() {
     } else lcd.printf("          ");
   } else if ( _operationMode == OperationMode::opFunction ) {
     menu.hide();
+
     lcd.setCursor(0,0);
     if (_leftThrottle) lcd.printf("012345678%c", byte(2)); 
     else lcd.printf("         %c", byte(2));

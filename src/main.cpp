@@ -9,8 +9,6 @@ void setup() {
   DCCEXInterface.init(&DCCEX_STREAM, &DCCEX_LOG);
   XpressNetInterface.setup(Loco128, XNETPOPRT, XNETCONTROL);
   CommandStation.init();
-  
-  DIAG("%s\n", CS_NAME);
 }
 
 void loop() {
