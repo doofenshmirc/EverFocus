@@ -35,7 +35,10 @@ uint8_t uint8Input3 = 0;
 std::vector<const char*> trackType = {"MAIN", "PROG", "DC", "DCX", "NONE"};
 std::vector<const char*> locoList;
 std::vector<const char*> driveMode = {"AC", "DC", "CAB"};
-std::vector<const char*> buttonList = {"Rec", "Stop", "DRV", "Track", "F1", "Hold", "Position", "Display", "Play", "Home", "CAM", "FocusF", "F3", "FocusN", "A_Pan", "Mode", "Copy", "Clr", "4", "Set", "Not used", "1", "7", "Seq", "Menu", "Enter", "6", "Not used", "Not used", "3", "9", "Esc", "Not used", "Not used", "Not used", "Not used", "Not used", "Not used", "Not used", "Not used", "Call", "0", "5", "Shift", "Not used", "2", "8", "Search", "Pause", "Not used", "Not used", "ZoomIn", "F4", "ZoomOut", "Not used", "Zoom", "Stop", "Not used", "MON", "Iris1", "F2", "Iris2", "Tour", "Select" };
+std::vector<const char*> buttonList = {"Display", "Rec", "Select", "Stop", "Mode", "Play", "Zoom", "Pause", "Seq", "Copy", "Search", "Call", "1", "4", "2", "5", "3", "6", "7", "Clr", "8", "0", "9", "Enter" "DRV", "CAM" };
+std::map<uint8_t, uint8_t> buttonCode = { {0, 7}, {1, 0}, {2, 63}, {3, 56}, {4, 15}, {5, 8}, {6, 55}, {7, 48}, {8, 23}, {9, 16}, {10, 47}, {11, 40}, {12, 21}, {13, 18}, {14, 45}, {15, 42}, {16, 29}, {17, 26}, {18, 22}, {19, 17}, {20, 46}, {21, 41}, {22, 30}, {23, 25}, {24, 2}, {25, 10} };
+std::map<uint8_t, uint8_t> buttonIndex = { {7, 0}, {0, 1}, {63, 2}, {56, 3}, {15, 4}, {8, 5}, {55, 6}, {48, 7}, {23, 8}, {16, 9}, {47, 10}, {40, 11}, {21, 12}, {18, 13}, {45, 14}, {42, 15}, {29, 16}, {26, 17}, {22, 18}, {17, 19}, {46, 20}, {41, 21}, {30, 22}, {25, 23}, {2, 24}, {10, 25} };
+
 MENU_SCREEN(mainMenuScreen, mainMenuItems,
   ITEM_SUBMENU("Locomotive manager", locoManagerMenuScreen),
   ITEM_SUBMENU("Throttle manager", throttleManagerMenuScreen),
@@ -56,13 +59,6 @@ MENU_SCREEN(throttleManagerMenuScreen, throttleManagerMenuItems,
   ITEM_BACK()
 );
 
-
-/*MENU_SCREEN(locoScreen, locoItems,
-  ITEM_INPUT_CHARSET("Loco name", locoItemName, "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789", [](char *name) { Serial.printf("New loco name:%s\n", name); } ),
-  ITEM_INPUT("Loco addr", locoItemAddr, [](char *addr) { Serial.printf("New loco addr:%s\n", addr); }),
-  ITEM_COMMAND("Save", []() { CommandStation.addLoco(atoi(locoItemAddr), locoItemName); menu.setScreen(locoManagerScreen); } ),
-  ITEM_COMMAND("..", []() { menu.setScreen(locoManagerScreen); } )
-);*/
 MENU_SCREEN(locoMenuScreen, locoMenuItems,
   ITEM_BACK()
 );
@@ -79,24 +75,11 @@ MENU_SCREEN(throttleInputMenuScreen, throttleInputMenuItems,
   ITEM_BACK()
 );
 
-/*[]() {
-  // Dynamically add items to the screen at a specific position
-  locosScreen->addItemAt(1, ITEM_BASIC("Network Between"));
-  menu.refresh();
-}),
-ITEM_COMMAND("Delete from roster", []() {
-  // Dynamically remove an item from the screen at a specific position
-  locosScreen->removeItemAt(1);
-  menu.refresh();
-}),*/
-
 void rangeCallbackA(const Ref<int>& addr) { if (DCCEXInterface.trackAType != 2 && DCCEXInterface.trackAType != 3) DCCEXInterface.trackAAddr = 0; }
 void rangeCallbackB(const Ref<int>& addr) { if (DCCEXInterface.trackBType != 2 && DCCEXInterface.trackBType != 3) DCCEXInterface.trackBAddr = 0; }
 void rangeCallbackC(const Ref<int>& addr) { if (DCCEXInterface.trackCType != 2 && DCCEXInterface.trackCType != 3) DCCEXInterface.trackCAddr = 0; }
 void rangeCallbackD(const Ref<int>& addr) { if (DCCEXInterface.trackDType != 2 && DCCEXInterface.trackDType != 3) DCCEXInterface.trackDAddr = 0; }
 MENU_SCREEN(trackManagerMenuScreen, trackManagerMenuItems,
-//  ITEM_LIST_REF("Color", colors, [](const Ref<uint8_t> color) { Serial.printf("FASZA color: %d\n", color); }, A),
-//  ITEM_LIST("Color", colors, [](const uint8_t color) { Serial.println("FASZA"); }, A),
   ITEM_WIDGET(
     "Track(A)",
     [](const Ref<uint8_t> trackType, Ref<int> addr) { /*Serial.printf("Type:%s Addr:%d\n", trackTypes[trackType], static_cast<int>(addr));*/ },
@@ -132,21 +115,21 @@ void CommandStationClass::init() {
   lcd.init();
   lcd.backlight();
   lcd.createChar(2, lcdLineChar);
-  lcd.setCursor(0,0);
   lcd.print(CS_NAME);
   delay(1000);
-
-  _operationMode = OperationMode::opDrive;
   
   encoder.begin();
- 
   renderer.begin();
 
   //////Ez csak atmeneti a teszteles idejere amig nincs eeprom olvasas/////
-  addThrottle(2093, "M41 2093", DriveMode::drvAC, 7);
-  addThrottle(19, "M61 019", DriveMode::drvCAB, 63);
-  addThrottle(219, "M62 219", DriveMode::drvCAB, 0);
-  addThrottle(119, "V200 119", DriveMode::drvCAB, 56);
+  addLoco(2093, "M41 002");
+  addLoco(19, "M61 019");
+  addLoco(219, "M62 219");
+  addLoco(1119, "V200 1119");
+  addThrottle(2093, DriveMode::drvAC, 7);
+  addThrottle(19, DriveMode::drvDC, 63);
+  addThrottle(219, DriveMode::drvDC, 0);
+  addThrottle(1119, DriveMode::drvCAB, 56);
   /////////////////////////////////////////////////////////////////////////
   
   menu.setScreen(mainMenuScreen);
@@ -225,14 +208,14 @@ void CommandStationClass::updateThrottleInputMenu(uint16_t addr) {
   
   if (throttle) {
     uint8Input2 = (uint8_t)throttle->getDriveMode();
-    uint8Input3 = (uint8_t)throttle->getButton();
+    uint8Input3 = buttonIndex[throttle->getButton()];
   }
   
-  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Loco", locoList, [](const Ref<uint8_t> loco) { Serial.printf("FASZA loco: \n"); }, uint8Input1));
-  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Mode", driveMode, [](const Ref<uint8_t> drive) { Serial.printf("FASZA drive: \n"); }, uint8Input2));
-  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Button", buttonList, [](const Ref<uint8_t> loco) { Serial.printf("FASZA button: \n"); }, uint8Input3));
-//  throttleInputMenuScreen->addItem(ITEM_COMMAND("Add or update", []() { CommandStation.addThrottle(convertStringToUint16(input1), rtrim(input2, ' ')) ; CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen); menu.refresh(); } ));
-//  throttleInputMenuScreen->addItem(ITEM_COMMAND("Remove", []() { CommandStation.delThrottle(convertStringToUint16(input1)) ; CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen); menu.reset(); } ));
+  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Loco", locoList, [](const Ref<uint8_t> loco) { }, uint8Input1));
+  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Mode", driveMode, [](const Ref<uint8_t> drive) { }, uint8Input2));
+  throttleInputMenuScreen->addItem(ITEM_LIST_REF("Button", buttonList, [](const Ref<uint8_t> button) { }, uint8Input3));
+  throttleInputMenuScreen->addItem(ITEM_COMMAND("Add or update", []() { CommandStation.addThrottle(CommandStation.getLocoByName(locoList[uint8Input1])->getAddress(), uint8Input2, buttonCode[uint8Input3]) ; CommandStation.updateThrottleMenu(); menu.setScreen(throttleMenuScreen); menu.refresh(); } ));
+  throttleInputMenuScreen->addItem(ITEM_COMMAND("Remove", []() { CommandStation.delThrottle(CommandStation.getLocoByName(locoList[uint8Input1])->getAddress()) ; CommandStation.updateThrottleMenu(); menu.setScreen(throttleMenuScreen); menu.reset(); } ));
   throttleInputMenuScreen->addItem(ITEM_BACK());
 }
 
@@ -277,24 +260,36 @@ LocoClass *CommandStationClass::addLoco(uint16_t addr, const char* name) {
 
 void CommandStationClass::delLoco(uint16_t addr) {
   LocoClass *loco = getLocoByAddress(addr);
- 
-  if (loco) delete loco; 
-}
-
-ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, const char *name, DriveMode driveMode, uint8_t button) {
-  SlotClass *slot = addSlot(addr, 0);
-  LocoClass *loco = addLoco(addr, name); 
   ThrottleClass *throttle = getThrottleByAddress(addr);
  
+  if (loco && !throttle) delete loco; 
+}
+
+ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, uint8_t driveMode, uint8_t button) {
+  SlotClass *slot = addSlot(addr, 0);
+  LocoClass *loco = getLocoByAddress(addr); 
+  ThrottleClass *throttle = getThrottleByAddress(addr);
+  Serial.printf("addThrottle addr=%d drive=%d button=%d\n", addr, driveMode, button);
   if (!throttle) { 
     throttle = new ThrottleClass(slot, loco, driveMode, button); 
   } else {
     throttle->setLoco(loco);
+    throttle->setButton(button);
   }
 
   if (!_throttles) _throttles = throttle;
     
   return throttle;
+}
+
+void CommandStationClass::delThrottle(uint16_t addr) {
+  ThrottleClass *throttle = getThrottleByAddress(addr);
+ 
+  if (throttle) {
+    if (_leftThrottle == throttle) _leftThrottle = nullptr;
+    if (_rightThrottle == throttle) _rightThrottle = nullptr;
+    delete throttle; 
+  }
 }
 
 const char *CommandStationClass::getLocoName(uint16_t addr) {
@@ -423,80 +418,83 @@ void CommandStationClass::inputLoop() {
     if (lastIndex != index ) {
       switch (index)                                //Keyboard
       {
-        case ButtonCode::btnMenu:
+        case BTN_MENU:
           _operationMode = OperationMode::opDrive;
           break;
 
-        case ButtonCode::btnEnter:
+        case BTN_ENTER:
           menu.process(ENTER);
           break;
   
-        case ButtonCode::btnEsc:
+        case BTN_ESC:
           menu.process(BACK);
           break;
       
-        case ButtonCode::btnClr:
+        case BTN_CLR:
           menu.process(BACKSPACE);
           break;
   
-        case ButtonCode::btnTour:
+        case BTN_TOUR:
           menu.process(UP);
           break;
   
-        case ButtonCode::btnSet:
+        case BTN_SET:
           menu.process(DOWN);
           break;
   
-        case ButtonCode::btnHome:
+        case BTN_HOME:
           menu.process(RIGHT);
           break;
   
-        case ButtonCode::btnStop:
+        case BTN_STOP2:
           menu.process(LEFT);
           break;
   
-        case ButtonCode::btn0:
+        case BTN_0:
           menu.process('0');
           break;
         
-        case ButtonCode::btn1:
+        case BTN_1:
           menu.process('1');
           break;
         
-        case ButtonCode::btn2:
+        case BTN_2:
           menu.process('2');
           break;
         
-        case ButtonCode::btn3:
+        case BTN_3:
           menu.process('3');
           break;
         
-        case ButtonCode::btn4:
+        case BTN_4:
           menu.process('4');
           break;
         
-        case ButtonCode::btn5:
+        case BTN_5:
           menu.process('5');
           break;
         
-        case ButtonCode::btn6:
+        case BTN_6:
           menu.process('6');
           break;
         
-        case ButtonCode::btn7:
+        case BTN_7:
           menu.process('7');
           break;
         
-        case ButtonCode::btn8:
+        case BTN_8:
           menu.process('8');
           break;
         
-        case ButtonCode::btn9:
+        case BTN_9:
           menu.process('9');
           break;
 
-        case ButtonCode::btnShift:
-          //Serial.printf("Debug modeA=%d\n", modeA);
+        case BTN_MON:
+          EmergencyStop(SRC_THROTTLE);
+          break;
+
+        case BTN_SHIFT:
           break;
         
         default:
@@ -530,53 +528,109 @@ void CommandStationClass::inputLoop() {
     if (lastIndex != index ) {
       switch (index)                                //Keyboard
       {
-        case ButtonCode::btnMenu:
+        case BTN_MENU:
           _operationMode = OperationMode::opMenu;
           break;
 
-        case ButtonCode::btnDisplay:
-        case ButtonCode::btnSelect:
+        case BTN_DISPLAY:
+        case BTN_SELECT:
+        case BTN_MODE:
+        case BTN_ZOOM:
+        case BTN_SEQ:
+        case BTN_SEARCH:
+        case BTN_1:
+        case BTN_2:
+        case BTN_3:
+        case BTN_7:
+        case BTN_8:
+        case BTN_9:
+        case BTN_DRV:
           _leftThrottle = getThrottleByButton(index);
           break;
-
-        case ButtonCode::btnRec:
-        case ButtonCode::btnStop:
-          _rightThrottle = getThrottleByButton(index);
-          break;
-        
-        case ButtonCode::btnTrack:
+        case BTN_FOCUSN:
           _leftThrottle->incReverser();
           break;
-
-        case ButtonCode::btnHold:
+        case BTN_HOLD:
           _leftThrottle->decReverser();
           break;
-
-        case ButtonCode::btnIris1:
+        case BTN_IRIS1:
           _leftThrottle->incDrive();
           break;
-
-        case ButtonCode::btnIris2:
+        case BTN_IRIS2:
           _leftThrottle->decDrive();
           break;
+        case BTN_AUTO:
+          _leftThrottle->chgFunction(0);
+          break;
+        case BTN_FOCUSF:
+          _leftThrottle->chgFunction(1);
+          break;
+          case BTN_ZOOMIN:
+          _leftThrottle->chgFunction(2);
+          break;
+          case BTN_ZOOMOUT:
+          _leftThrottle->chgFunction(3);
+          break;
 
-        case ButtonCode::btnFocusF:
+        case BTN_REC:
+        case BTN_STOP:
+        case BTN_PLAY:
+        case BTN_PAUSE:
+        case BTN_COPY:
+        case BTN_CALL:
+        case BTN_4:
+        case BTN_5:
+        case BTN_6:
+        case BTN_CLR:
+        case BTN_0:
+        case BTN_ENTER:
+        case BTN_CAM:
+          _rightThrottle = getThrottleByButton(index);
+          break;
+        case BTN_HOME:
           _rightThrottle->incReverser();
           break;
-
-        case ButtonCode::btnFocusN:
+        case BTN_STOP2:
           _rightThrottle->decReverser();
           break;
-
-        case ButtonCode::btnZoomIn:
+        case BTN_TOUR:
           _rightThrottle->incDrive();
           break;
-
-        case ButtonCode::btnZoomOut:
+        case BTN_SET:
           _rightThrottle->decDrive();
+          break;
+        case BTN_POSITION:
+          _rightThrottle->chgFunction(0);
+          break;
+        case BTN_F1:
+          _rightThrottle->chgFunction(1);
+          break;
+        case BTN_F2:
+          _rightThrottle->chgFunction(2);
+          break;
+        case BTN_F3:
+          _rightThrottle->chgFunction(3);
+          break;
+        case BTN_F4:
+          _rightThrottle->chgFunction(4);
+          break;
+        case BTN_SHIFT:
+          _operationMode = OperationMode::opFunction;
+          break;
+
+        case BTN_MON:
+          EmergencyStop(SRC_THROTTLE);
           break;
 
         default:
+          break;
+      }
+    }
+  } else if (_operationMode == OperationMode::opFunction ) {
+    if (lastIndex != index ) {
+      switch (index) {
+        case BTN_SHIFT:
+          _operationMode = OperationMode::opDrive;
           break;
       }
     }
@@ -643,8 +697,11 @@ void CommandStationClass::displayLoop() {
           rev = char(0x7E);
           break;
       }
+      if ( _leftThrottle->getDriveMode() == DriveMode::drvDC ) {
+        lcd.printf("%cDC   %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
+      }
       if ( _leftThrottle->getDriveMode() == DriveMode::drvAC ) {
-        lcd.printf("%c     %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
+        lcd.printf("%cAC   %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
       }
       if ( _leftThrottle->getDriveMode() == DriveMode::drvCAB ) {
         if ( _leftThrottle->getBrake() == 0 ) {
@@ -654,7 +711,6 @@ void CommandStationClass::displayLoop() {
         }
       }
     } else lcd.printf("         %c", byte(2));
-
     if (_rightThrottle) {
       switch ( _rightThrottle->getReverser() ) {
         case -1:
@@ -667,8 +723,11 @@ void CommandStationClass::displayLoop() {
           rev = char(0x7E);
           break;
       }
+      if ( _rightThrottle->getDriveMode() == DriveMode::drvDC ) {
+        lcd.printf(" %cDC   %3d", rev, _rightThrottle->getSpeed());
+      }
       if ( _rightThrottle->getDriveMode() == DriveMode::drvAC ) {
-        lcd.printf(" %c     %3d", rev, _rightThrottle->getSpeed());
+        lcd.printf(" %cAC   %3d", rev, _rightThrottle->getSpeed());
       }
       if ( _rightThrottle->getDriveMode() == DriveMode::drvCAB ) {
         if ( _rightThrottle->getBrake() == 0 ) {
@@ -678,9 +737,19 @@ void CommandStationClass::displayLoop() {
         }
       }
     } else lcd.printf("          ");
-  }
-
-  if ( _operationMode == OperationMode::opMenu ) {
+  } else if ( _operationMode == OperationMode::opFunction ) {
+    menu.hide();
+    lcd.setCursor(0,0);
+    if (_leftThrottle) lcd.printf("012345678%c", byte(2)); 
+    else lcd.printf("         %c", byte(2));
+    if (_rightThrottle) lcd.printf(" 012345678"); 
+    else lcd.printf("          ");
+    lcd.setCursor(0,1);
+    if (_leftThrottle) lcd.printf("%s%s%s%s%s%s%s%s%s%c", BOOL_STR(_leftThrottle->getFunction(0)), BOOL_STR(_leftThrottle->getFunction(1)), BOOL_STR(_leftThrottle->getFunction(2)), BOOL_STR(_leftThrottle->getFunction(3)), BOOL_STR(_leftThrottle->getFunction(4)), BOOL_STR(_leftThrottle->getFunction(5)), BOOL_STR(_leftThrottle->getFunction(6)), BOOL_STR(_leftThrottle->getFunction(7)), BOOL_STR(_leftThrottle->getFunction(8)), byte(2));
+    else lcd.printf("         %c", byte(2));
+    if (_rightThrottle) lcd.printf(" %s%s%s%s%s%s%s%s%s", BOOL_STR(_rightThrottle->getFunction(0)), BOOL_STR(_rightThrottle->getFunction(1)), BOOL_STR(_rightThrottle->getFunction(2)), BOOL_STR(_rightThrottle->getFunction(3)), BOOL_STR(_rightThrottle->getFunction(4)), BOOL_STR(_rightThrottle->getFunction(5)), BOOL_STR(_rightThrottle->getFunction(6)), BOOL_STR(_rightThrottle->getFunction(7)), BOOL_STR(_rightThrottle->getFunction(8)) );
+    else lcd.printf("          ");
+  } else if ( _operationMode == OperationMode::opMenu ) {
     menu.show();
   }
 }
@@ -714,6 +783,15 @@ SlotClass *CommandStationClass::getSlotById(uint8_t id) {
 LocoClass *CommandStationClass::getLocoByAddress(uint16_t addr) {
   for (LocoClass *l = _locos->getFirst(); l; l = l->getNext()) {
     if (l->getAddress() == addr) {
+      return l;
+    }
+  }
+  return nullptr;
+}
+
+LocoClass *CommandStationClass::getLocoByName(const char* name) {
+  for (LocoClass *l = _locos->getFirst(); l; l = l->getNext()) {
+    if (strcmp(l->getName(), name) == 0) {
       return l;
     }
   }

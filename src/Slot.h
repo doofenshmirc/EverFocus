@@ -56,6 +56,9 @@ public:
   uint8_t getDirection() { return _dir; }
   void setDirection(uint8_t dir, uint8_t src);
 
+  bool getFunction(uint8_t function);
+  void setFunction(uint8_t function, uint16_t value, uint8_t src);
+
   uint16_t getFunctions() { return _functions; }
   void setFunctions(uint16_t functions, uint8_t src);
 

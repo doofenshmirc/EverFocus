@@ -14,7 +14,7 @@ enum DriveMode {
 
 class ThrottleClass {
   public:
-    ThrottleClass(SlotClass *slot, LocoClass *loco, DriveMode driveMode, uint8_t button);
+    ThrottleClass(SlotClass *slot, LocoClass *loco, uint8_t driveMode, uint8_t button);
 
     uint8_t getButton() { return _button; }
     void setButton(uint8_t button) { _button = button; }
@@ -23,9 +23,12 @@ class ThrottleClass {
     void setLoco(LocoClass* loco) { _loco = loco; }
 
     uint16_t getAddress() { return _slot->getAddress(); }
+
     uint8_t getSpeed() { return _slot->getSpeed(); }
     uint8_t getTargetSpeed();
+
     uint8_t getDirection() { return _slot->getDirection(); }
+    
     const char *getName() { return _loco->getName(); }
 
     int8_t getReverser() { return _reverser; }
@@ -33,16 +36,22 @@ class ThrottleClass {
     void decReverser();
 
     int8_t getBrake() { return _brake; }
+    
     int8_t getThrottle() { return _throttle; }
+    
     void incDrive();
     void decDrive();
 
-    DriveMode getDriveMode() { return _driveMode; }
-    void setDriveMode(DriveMode driveMode) { _driveMode = driveMode; }
+    uint8_t getDriveMode() { return _driveMode; }
+    void setDriveMode(uint8_t driveMode) { _driveMode = driveMode; }
 
     double getSpeedChangeTime() { return _speedChangeTime; }
     void setSpeedChangeTime(double speedChangeTime) { _speedChangeTime = speedChangeTime; }
-    
+
+    bool getFunction(uint8_t function) { return _slot->getFunction(function); };
+
+    void chgFunction(uint8_t function);
+
     void check();
 
   /// @brief Get first turnout object
@@ -71,9 +80,9 @@ class ThrottleClass {
     ~ThrottleClass();
 
   private:
-    SlotClass *_slot;
-    LocoClass *_loco;
-    DriveMode _driveMode = DriveMode::drvCAB;
+    SlotClass *_slot = nullptr;
+    LocoClass *_loco = nullptr;
+    uint8_t _driveMode = DriveMode::drvCAB;
     int8_t _brake = 0;
     int8_t _throttle = 0;
     int8_t _reverser = 0;

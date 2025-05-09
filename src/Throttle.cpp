@@ -6,7 +6,7 @@ int accel_delay_times[] = ACCEL_DELAY_TIMES;
 
 ThrottleClass *ThrottleClass::_first = nullptr;
 
-ThrottleClass::ThrottleClass(SlotClass *slot, LocoClass *loco, DriveMode driveMode, uint8_t button) {
+ThrottleClass::ThrottleClass(SlotClass *slot, LocoClass *loco, uint8_t driveMode, uint8_t button) {
   _slot = slot;
   _loco = loco;
   _driveMode = driveMode;
@@ -31,6 +31,7 @@ void ThrottleClass::incReverser() {
   if ( _reverser == -1 ) {
     _reverser = 0;
     _throttle = 0;
+    if ( _driveMode != DriveMode::drvCAB ) _slot->setSpeed(0, SRC_THROTTLE);
   } else if ( _reverser == 0 && _slot->getSpeed() == 0 ) { 
     _reverser = 1; 
     _slot->setDirection(1, SRC_THROTTLE);
@@ -41,6 +42,7 @@ void ThrottleClass::decReverser() {
   if ( _reverser == 1 ) {
     _reverser = 0;
     _throttle = 0;
+    if ( _driveMode != DriveMode::drvCAB ) _slot->setSpeed(0, SRC_THROTTLE);
   } else if ( _reverser == 0 && _slot->getSpeed() == 0 ) { 
     _reverser = -1; 
     _slot->setDirection(0, SRC_THROTTLE);
@@ -52,6 +54,11 @@ void ThrottleClass::incDrive() {
     case DriveMode::drvCAB:
       if ( _brake > 0 ) _brake--; 
       else if ( (_throttle < (sizeof(target_speeds)/sizeof(target_speeds[0]))-1) && _reverser != 0) _throttle++;
+      break;
+    case DriveMode::drvDC:
+      if ( _slot->getSpeed() == 0 ) incReverser();
+      _slot->getDirection() == 0 ? _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE) : _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      if ( _slot->getSpeed() == 0 ) incReverser();
       break;
     case DriveMode::drvAC:
       if ( _reverser != 0) _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
@@ -67,10 +74,20 @@ void ThrottleClass::decDrive() {
         _brake++;
       }
       break;
+    case DriveMode::drvDC:
+      if ( _slot->getSpeed() == 0 ) decReverser();
+      _slot->getDirection() == 0 ? _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE) : _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      if ( _slot->getSpeed() == 0 ) decReverser();
+      break;
     case DriveMode::drvAC:
       _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
       break;
   }
+}
+
+void ThrottleClass::chgFunction(uint8_t function) {
+  bool current = _slot->getFunction(function);
+  _slot->setFunction(function, !current, SRC_THROTTLE);
 }
 
 void ThrottleClass::check() {
@@ -99,7 +116,8 @@ void ThrottleClass::check() {
         }
       } else { _speedChangeTime = -1; }
       break;
-    case DriveMode::drvAC:
+      case DriveMode::drvDC:
+      case DriveMode::drvAC:
       break;
   }
 }

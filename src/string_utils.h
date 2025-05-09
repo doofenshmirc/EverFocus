@@ -4,6 +4,10 @@
 #include "Arduino.h"
 #include <cstring>   // for memcpy
 #include <cstdlib>   // for malloc
+#include <iostream>
+#include <map>
+#include <algorithm>
+#define BOOL_STR(b) ((b) ? "X" : " ")
 
 char* rtrim(char* c, char junk);
 char* ltrim(char* c, char junk);

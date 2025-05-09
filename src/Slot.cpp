@@ -51,6 +51,20 @@ void SlotClass::setDirection(uint8_t dir, uint8_t src) {
     _dir = dir;
   }
 }
+bool SlotClass::getFunction(uint8_t function) {
+  return (_functions >> function) && 0x01;
+}
+
+void SlotClass::setFunction(uint8_t function, uint16_t value, uint8_t src) {
+  uint16_t mask = 0x01 << function;
+
+  if ( (_functions & mask) ^ (value << function) ) {
+    if (getStatus() == SLOT_STAT_INIT) setFunctionsStatus(0xFFFF);
+    else setFunctionsStatus(mask);
+    setSourceStatus(src);
+    value==0 ? _functions &= !mask : _functions |= mask;
+  } 
+}
 
 void SlotClass::setFunctions(uint16_t functions, uint8_t src) {
   if ( _functions != functions) {
