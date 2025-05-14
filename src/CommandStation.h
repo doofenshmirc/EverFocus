@@ -23,6 +23,7 @@
 #include <display/LiquidCrystal_I2CAdapter.h>
 #include <renderer/CharacterDisplayRenderer.h>
 
+#include "Preferences.h"
 #include "LiquidCrystal_I2C.h"
 #include "NewEncoder.h"
 #include "Wire.h"
@@ -89,6 +90,9 @@ class CommandStationClass {
     void throttleLoop();
     void displayLoop();
 
+    void storeData();
+    void restoreData();
+
     void check();
 
   private:
@@ -99,6 +103,7 @@ class CommandStationClass {
     ThrottleClass *_throttles = nullptr;
     ThrottleClass *_leftThrottle = nullptr;
     ThrottleClass *_rightThrottle = nullptr;
+    Preferences _preferences;
     SlotClass *getSlotById(uint8_t id);
     SlotClass *getSlotByAddress(uint16_t addr);
     LocoClass *getLocoByAddress(uint16_t addr);

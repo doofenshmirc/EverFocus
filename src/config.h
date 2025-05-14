@@ -1,4 +1,4 @@
-#define CS_NAME         "EverFocus"
+#define CS_NAME        "EverFocus"
 #define LCD_ROWS        2
 #define LCD_COLS        20
 #define ENCODER_CLK_PIN 15
@@ -8,12 +8,20 @@
 #define ENCODER_SW3_PIN 27
 #define ENCODER_SWD_PIN 35
 #define MAX_SLOT_NUM    127
-#define DEBUG_EVERFOCUS
+#define LOG_STREAM      Serial
+//#define DEBUG_EVERFOCUS
+
+//Wifi Interface 
+//#define WIFI
+#define WIFI_SSID  "Your network name"        // WiFi SSID name here
+#define WIFI_PASSWORD "YOUR_PASSWORD_HERE"  // WiFi password here
 
 //DCCEX Interface
-#define DCCEX                  
-#define DCCEX_LOG    Serial
+#define DCCEX  
+#define DCCEX_ADDRESS { 192, 168, 1, 200 }   // IP address of your EX-CommandStation             
+#define DCCEX_PORT 2560                      // Port number of your EX-CommandStation             
 #define DCCEX_STREAM Serial2  
+//#define DCCEX_STREAM wifiClient
 
 //LocoNet Interface
 #define LOCONET                

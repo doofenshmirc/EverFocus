@@ -90,6 +90,10 @@ void ThrottleClass::chgFunction(uint8_t function) {
   _slot->setFunction(function, !current, SRC_THROTTLE);
 }
 
+void ThrottleClass::EmergencyStop() {
+  _throttle = 0;
+}
+
 void ThrottleClass::check() {
   int8_t changeAmount = 0;
   switch (_driveMode) {

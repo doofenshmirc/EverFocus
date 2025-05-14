@@ -18,7 +18,7 @@ class ThrottleClass {
 
     uint8_t getButton() { return _button; }
     void setButton(uint8_t button) { _button = button; }
-
+    
     LocoClass* getLoco() { return _loco; }
     void setLoco(LocoClass* loco) { _loco = loco; }
 
@@ -51,6 +51,8 @@ class ThrottleClass {
     bool getFunction(uint8_t function) { return _slot->getFunction(function); };
 
     void chgFunction(uint8_t function);
+
+    void EmergencyStop();
 
     void check();
 

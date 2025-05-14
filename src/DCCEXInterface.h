@@ -11,9 +11,9 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     uint8_t trackAType = 0;
     int trackBAddr = 0;
     uint8_t trackBType = 1;
-    int trackCAddr = 0;
+    int trackCAddr = 1;
     uint8_t trackCType = 4;
-    int trackDAddr = 0;
+    int trackDAddr = 2;
     uint8_t trackDType = 4;
 
     DCCEXInterfaceClass();

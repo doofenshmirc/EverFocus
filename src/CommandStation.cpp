@@ -45,7 +45,8 @@ MENU_SCREEN(mainMenuScreen, mainMenuItems,
   ITEM_SUBMENU("Locomotive manager", locoManagerMenuScreen),
   ITEM_SUBMENU("Throttle manager", throttleManagerMenuScreen),
   ITEM_SUBMENU("Track manager", trackManagerMenuScreen),
-  ITEM_COMMAND("Store config data", []() { /* Fejlesztendo */ } )
+  ITEM_COMMAND("Restore config data", []() { CommandStation.restoreData(); } ),
+  ITEM_COMMAND("Store config data", []() { CommandStation.storeData(); } )
 );
 
 MENU_SCREEN(locoManagerMenuScreen, locoManagerMenuItems,
@@ -117,24 +118,18 @@ void CommandStationClass::init() {
   lcd.init();
   lcd.backlight();
   lcd.createChar(2, lcdLineChar);
-  lcd.setCursor(0, 0);
-  lcd.printf("  %s %s", CS_NAME, VERSION);
-  delay(1000);
+  lcd.setCursor(5, 0);
+  lcd.printf("%s", CS_NAME);
+  lcd.setCursor(2, 1);
+  lcd.printf("%s", "Load config data");
   
+  restoreData();
+
+  DCCEXInterface.setTracksType();
+
   encoder.begin();
   renderer.begin();
   menu.setScreen(mainMenuScreen);
-
-  //////Ez csak atmeneti a teszteles idejere amig nincs eeprom olvasas/////
-  addLoco(2093, "M41 002");
-  addLoco(19, "M61 019");
-  addLoco(219, "M62 219");
-  addLoco(1119, "V200 1119");
-  addThrottle(2093, DriveMode::drvAC, 7);
-  addThrottle(19, DriveMode::drvDC, 63);
-  addThrottle(219, DriveMode::drvDC, 0);
-  addThrottle(1119, DriveMode::drvCAB, 56);
-  /////////////////////////////////////////////////////////////////////////
 }
 
 void CommandStationClass::updateLocoMenu() {
@@ -270,11 +265,12 @@ ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, uint8_t driveMode
   SlotClass *slot = addSlot(addr, 0);
   LocoClass *loco = getLocoByAddress(addr); 
   ThrottleClass *throttle = getThrottleByAddress(addr);
-
+Serial.printf("CommandStationClass::addThrottle a=%d d=%d b=%d\n", addr, driveMode, button);
   if (!throttle) { 
     throttle = new ThrottleClass(slot, loco, driveMode, button); 
   } else {
     throttle->setLoco(loco);
+    throttle->setDriveMode(driveMode);
     throttle->setButton(button);
   }
 
@@ -386,6 +382,7 @@ void CommandStationClass::EmergencyStop(uint8_t src) {
   if ( src != SRC_DCCEX ) DCCEXInterface.EmergencyStop();
   if ( src != SRC_LOCONET ) LocoNetInterface.EmergencyStop();
   if ( src != SRC_XPRESSNET ) XpressNetInterface.EmergencyStop();
+  for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) t->EmergencyStop();
 }
 
 void CommandStationClass::inputLoop() {
@@ -424,10 +421,12 @@ void CommandStationClass::inputLoop() {
           break;
 
         case BTN_ENTER:
+        case BTN_APAN:
           menu.process(ENTER);
           break;
   
         case BTN_ESC:
+        case BTN_POSITION:
           menu.process(BACK);
           break;
       
@@ -619,6 +618,7 @@ void CommandStationClass::inputLoop() {
           break;
 
         case BTN_MON:
+          getPower() ? setPower(0, SRC_THROTTLE) : setPower(1, SRC_THROTTLE);
           EmergencyStop(SRC_THROTTLE);
           break;
 
@@ -691,6 +691,9 @@ void CommandStationClass::inputLoop() {
           break;
         case BTN_ZOOMOUT:
           if (_rightThrottle) _rightThrottle->chgFunction(9);
+          break;
+        case BTN_MON:
+          EmergencyStop(SRC_THROTTLE);
           break;
       }
     }
@@ -822,6 +825,82 @@ void CommandStationClass::check() {
   displayLoop();
 }
 
+void CommandStationClass::storeData() {
+  uint16_t i;
+
+  _preferences.begin(CS_NAME, false);
+  _preferences.clear();
+ 
+  //Locos data
+  i = 0;
+  for (LocoClass *l = _locos->getFirst(); l; l = l->getNext()) {
+    String prefix = "l" + String(i);
+    _preferences.putUInt((prefix + "a").c_str(), l->getAddress());
+    _preferences.putString((prefix + "n").c_str(), l->getName());
+    i++;
+  }  
+  _preferences.putUInt("lc", i);
+  
+  //Throttles data
+  i = 0;
+  for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) {
+    String prefix = "t" + String(i);
+    _preferences.putUInt((prefix + "a").c_str(), t->getAddress());
+    _preferences.putUInt((prefix + "d").c_str(), t->getDriveMode());
+    _preferences.putUInt((prefix + "b").c_str(), t->getButton());
+    i++;
+  }
+  _preferences.putUInt("tc", i);
+  if (_leftThrottle) _preferences.putUInt("lta", _leftThrottle->getAddress());
+  if (_rightThrottle) _preferences.putUInt("rta", _rightThrottle->getAddress());
+
+  //Tracks data
+  _preferences.putUInt("traa", DCCEXInterface.trackAAddr);
+  _preferences.putUInt("trat", DCCEXInterface.trackAType);
+  _preferences.putUInt("trba", DCCEXInterface.trackBAddr);
+  _preferences.putUInt("trbt", DCCEXInterface.trackBType);
+  _preferences.putUInt("trca", DCCEXInterface.trackCAddr);
+  _preferences.putUInt("trct", DCCEXInterface.trackCType);
+  _preferences.putUInt("trda", DCCEXInterface.trackDAddr);
+  _preferences.putUInt("trdt", DCCEXInterface.trackDType);
+
+  _preferences.end();
+}
+
+void CommandStationClass::restoreData() {
+  _preferences.begin(CS_NAME, true);
+    
+  //Locos data
+  uint16_t count = _preferences.getUInt("lc");
+  Serial.printf("Store locomotives number: %d\n", count);
+  for (int i = 0; i < count; i++) {
+    String prefix = "l" + String(i);
+    addLoco(_preferences.getUInt((prefix + "a").c_str()), _preferences.getString((prefix + "n").c_str()).c_str());
+  }
+
+  //Throttles data
+  count = _preferences.getUInt("tc");
+  Serial.printf("Store throttles number: %d\n", count);
+  for (int i = 0; i < count; i++) {
+    String prefix = "t" + String(i);
+    addThrottle(_preferences.getUInt((prefix + "a").c_str()), _preferences.getUInt((prefix + "d").c_str()), _preferences.getUInt((prefix + "b").c_str()));
+  }
+  _leftThrottle = getThrottleByAddress(_preferences.getUInt("lta", 0));
+  _rightThrottle = getThrottleByAddress(_preferences.getUInt("rta", 0));
+
+  //Tracks data
+  DCCEXInterface.trackAAddr = _preferences.getUInt("traa", 0);
+  DCCEXInterface.trackAType = _preferences.getUInt("trat", 0);
+  DCCEXInterface.trackBAddr = _preferences.getUInt("trba", 0);
+  DCCEXInterface.trackBType = _preferences.getUInt("trbt", 1);
+  DCCEXInterface.trackCAddr = _preferences.getUInt("trca", 0);
+  DCCEXInterface.trackCType = _preferences.getUInt("trct", 4);
+  DCCEXInterface.trackDAddr = _preferences.getUInt("trda", 0);
+  DCCEXInterface.trackDType = _preferences.getUInt("trdt", 4);
+   
+  _preferences.end();
+}
+
 // private methods
 SlotClass *CommandStationClass::getSlotByAddress(uint16_t addr) {
   for (SlotClass *s = _slots->getFirst(); s; s = s->getNext()) {
@@ -884,6 +963,5 @@ ThrottleClass *CommandStationClass::getThrottleByButton(uint8_t button) {
   }
   return nullptr;
 }
-
 
 CommandStationClass CommandStation = CommandStationClass();
