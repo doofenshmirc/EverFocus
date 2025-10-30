@@ -17,7 +17,7 @@ class LocoNetInterfaceClass : public LocoNetDispatcher {
     void setSwitch(uint16_t addr, uint8_t out, uint8_t dir);
     void setSensor(uint16_t addr, uint8_t state);
     void setPower(uint8_t power);
-    void EmergencyStop();
+    void EmergencyStop(uint8_t src);
 };
 
 extern LocoNetInterfaceClass LocoNetInterface;

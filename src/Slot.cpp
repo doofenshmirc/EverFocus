@@ -18,6 +18,8 @@ SlotClass::SlotClass(uint16_t addr, uint8_t slot_id) {
 }
 
 void SlotClass::setSpeed(uint8_t speed, uint8_t src) {
+  if ( speed > 127 ) { speed = 0; }
+
   if ( _speed != speed) {
     setSpeedStatus(SLOT_SPEED_BIT);
     setSourceStatus(src);
@@ -36,7 +38,7 @@ void SlotClass::incSpeed(uint8_t amount, uint8_t src) {
 
 void SlotClass::decSpeed(uint8_t amount, uint8_t src) {
 
-  if ( _speed - amount >= 0 ) { 
+  if ( int(_speed - amount) >= 0 ) { 
     setSpeedStatus(SLOT_SPEED_BIT);
     setSourceStatus(src);
     _speed=_speed - amount; 

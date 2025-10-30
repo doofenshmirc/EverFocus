@@ -3,12 +3,26 @@
 DCCEXInterfaceClass::DCCEXInterfaceClass() {
 }
 
-void DCCEXInterfaceClass::init(Stream *client, Stream *log) {
-  _dccex.setLogStream(log);
+void DCCEXInterfaceClass::init(bool wifi) {
+  restoreConfig();
+
+  _dccex.setLogStream(&LOG_STREAM);
   _dccex.setDelegate(&DCCEXInterface);
-  _dccex.connect(client);
+  if (wifi) {
+    LOG_STREAM.printf("Connecting to DCCEX server...\n");
+    if (_wifiClient.connect(dccExAddress, dccExPort)) {
+      _dccex.connect(&_wifiClient);
+      LOG_STREAM.printf("Connected to DCCEX server...\n");
+    } else {
+      LOG_STREAM.printf("Connect to DCCEX server failed.\n");
+      _dccex.connect(&DCCEX_STREAM);
+    }
+  } else {
+    _dccex.connect(&DCCEX_STREAM);
+  }
   _dccex.requestServerVersion();
   _dccex.getLists(true, false, false, false);
+
   setTracksType();
 }
 
@@ -148,9 +162,38 @@ void DCCEXInterfaceClass::setTracksType() {
   _dccex.setTrackType('D', (TrackManagerMode)trackDType, trackDAddr);
 }
 
-void DCCEXInterfaceClass::EmergencyStop() { 
+void DCCEXInterfaceClass::EmergencyStop(uint8_t src) { 
   _dccex.emergencyStop(); 
 }
+
+void DCCEXInterfaceClass::storeConfig() {
+
+};
+
+void DCCEXInterfaceClass::restoreConfig() {
+  Preferences preferences;
+  IPAddress dccExAddressDefault = DCCEX_ADDRESS;
+
+  preferences.begin("DCCEXInterface", false);
+
+  dccExAddress[0] = preferences.getUInt("dea0", dccExAddressDefault[0]);
+  dccExAddress[1] = preferences.getUInt("dea1", dccExAddressDefault[1]);
+  dccExAddress[2] = preferences.getUInt("dea2", dccExAddressDefault[2]);
+  dccExAddress[3] = preferences.getUInt("dea3", dccExAddressDefault[3]);
+  dccExPort = preferences.getUInt("dep", DCCEX_PORT);
+  
+  //Tracks data
+  trackAAddr = preferences.getUInt("traa", 0);
+  trackAType = preferences.getUInt("trat", 0);
+  trackBAddr = preferences.getUInt("trba", 0);
+  trackBType = preferences.getUInt("trbt", 1);
+  trackCAddr = preferences.getUInt("trca", 0);
+  trackCType = preferences.getUInt("trct", 4);
+  trackDAddr = preferences.getUInt("trda", 0);
+  trackDType = preferences.getUInt("trdt", 4);
+   
+  preferences.end();  
+};
 
 void DCCEXInterfaceClass::check() {
   _dccex.check();

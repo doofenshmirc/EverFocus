@@ -1,4 +1,4 @@
-#define CS_NAME        "EverFocus"
+#define CS_NAME "EverFocus"
 #define LCD_ROWS        2
 #define LCD_COLS        20
 #define ENCODER_CLK_PIN 15
@@ -12,19 +12,18 @@
 //#define DEBUG_EVERFOCUS
 
 //Wifi Interface 
-//#define WIFI
-#define WIFI_SSID  "Your network name"        // WiFi SSID name here
-#define WIFI_PASSWORD "YOUR_PASSWORD_HERE"  // WiFi password here
+#define WIFI 1
+#define WIFI_SSID "Vodafone-D6D4"          // WiFi SSID name here
+#define WIFI_PASS "QWswF2vuz85dyacr"    // WiFi password here
 
 //DCCEX Interface
-#define DCCEX  
-#define DCCEX_ADDRESS { 192, 168, 1, 200 }   // IP address of your EX-CommandStation             
-#define DCCEX_PORT 2560                      // Port number of your EX-CommandStation             
+#define DCCEX 1  
+#define DCCEX_ADDRESS { 192, 168, 0, 45 }   // IP address of your EX-CommandStation             
+#define DCCEX_PORT 2560                     // Port number of your EX-CommandStation             
 #define DCCEX_STREAM Serial2  
-//#define DCCEX_STREAM wifiClient
 
 //LocoNet Interface
-#define LOCONET                
+#define LOCONET 1               
 #ifdef ESP32
   #define LOCONET_RX 5
   #define LOCONET_TX 18
@@ -34,14 +33,14 @@
 #endif
 
 //XpressNet Interface
-#define XPRESSNET   
+#define XPRESSNET 1   
 #define XNETPOPRT    19       //Max485 Busdriver RX/TX-PIN   
 #define XNETCONTROL  23       //Max485 Busdriver Send/Receive-PIN
 
 #define TARGET_SPEEDS     {0,    5,   10,  15,  40,  60,  90,  110,  127}  //speed in steps
 #define ACCEL_DELAY_TIMES {1000, 600, 550, 500, 450, 400, 350, 300, 250};   //ms
 #define BRAKE_DELAY_TIMES {1000, 500, 200, 125, 50, 25, 1};   //ms
-#define SPEED_AMOUNT 1
+#define SPEED_AMOUNT 2
 
 //Button codes
 #define BTN_REC      0
@@ -93,3 +92,13 @@
 #define BTN_TOUR     62
 #define BTN_SELECT   63
 #define BTN_ERROR    65
+
+//Joystick 
+#define JOY_X_PIN           39
+#define JOY_Y_PIN           36
+#define JOY_X_CENTER        2048
+#define JOY_Y_CENTER        2048
+#define JOY_LEFT_THRESHOLD  1048
+#define JOY_RIGHT_THRESHOLD 3048
+#define JOY_UP_THRESHOLD    1048
+#define JOY_DOWN_THRESHOLD  3048

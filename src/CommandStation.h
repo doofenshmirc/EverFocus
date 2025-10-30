@@ -6,6 +6,7 @@
 #include "XpressNetInterface.h"
 #include "Throttle.h"
 #include "Slot.h"
+#include "Joy.h"
 
 #include <ItemInput.h>
 #include <ItemBack.h>
@@ -23,6 +24,7 @@
 #include <display/LiquidCrystal_I2CAdapter.h>
 #include <renderer/CharacterDisplayRenderer.h>
 
+#include "WiFi.h"
 #include "Preferences.h"
 #include "LiquidCrystal_I2C.h"
 #include "NewEncoder.h"
@@ -44,6 +46,13 @@ class CommandStationClass {
 
     void init();
     
+    bool getWifi() { return _wifi; };
+    void setWifi(bool status) { _wifi = status; };
+    String getWifiSSID() { return _wifiSSID; };
+    void setWifiSSID(String ssid) { _wifiSSID = ssid; };
+    String getWifiPass() { return _wifiPass; };
+    void setWifiPass(String pass) { _wifiPass = pass; };
+
     uint16_t getSlotAddress(uint8_t id);
 
     SlotClass *addSlot(uint16_t addr, uint8_t id);
@@ -90,12 +99,15 @@ class CommandStationClass {
     void throttleLoop();
     void displayLoop();
 
-    void storeData();
-    void restoreData();
+    void storeConfig();
+    void restoreConfig();
 
     void check();
 
   private:
+    bool _wifi;
+    String _wifiSSID;
+    String _wifiPass;
     OperationMode _operationMode = OperationMode::opDrive;
     uint8_t _power;
     SlotClass *_slots = nullptr;
@@ -103,7 +115,6 @@ class CommandStationClass {
     ThrottleClass *_throttles = nullptr;
     ThrottleClass *_leftThrottle = nullptr;
     ThrottleClass *_rightThrottle = nullptr;
-    Preferences _preferences;
     SlotClass *getSlotById(uint8_t id);
     SlotClass *getSlotByAddress(uint16_t addr);
     LocoClass *getLocoByAddress(uint16_t addr);

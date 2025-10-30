@@ -1,6 +1,7 @@
 #ifndef DCCEXInterface_h
 #define DCCEXInterface_h
 
+#include "WiFi.h"
 #include <DCCEXProtocol.h>
 #include "CommandStation.h"
 #include "diag.h"
@@ -15,9 +16,11 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     uint8_t trackCType = 4;
     int trackDAddr = 2;
     uint8_t trackDType = 4;
+    IPAddress dccExAddress;
+    uint16_t dccExPort;
 
     DCCEXInterfaceClass();
-    void init(Stream *client, Stream *log);
+    void init(bool wifi);
     void receivedMessage(char *message);
     void receivedServerVersion(int major, int minor, int patch) override;
     void receivedTrackPower(TrackPower state) override;
@@ -34,9 +37,12 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     void requestRosterList();
     Loco* getRosterList() { return _dccex.roster; };
     void setTracksType();
-    void EmergencyStop();
+    void EmergencyStop(uint8_t src);
+    void storeConfig();
+    void restoreConfig();
     void check();
   private:
+    WiFiClient _wifiClient;
     DCCEXProtocol _dccex;
 };
 

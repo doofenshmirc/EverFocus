@@ -49,7 +49,7 @@ void ThrottleClass::decReverser() {
   }  
 }
 
-void ThrottleClass::incDrive() {
+void ThrottleClass::incDrive(uint8_t amount) {
   switch (_driveMode) {
     case DriveMode::drvCAB:
       if ( _brake > 0 ) _brake--; 
@@ -57,16 +57,16 @@ void ThrottleClass::incDrive() {
       break;
     case DriveMode::drvDC:
       if ( _slot->getSpeed() == 0 ) incReverser();
-      _slot->getDirection() == 0 ? _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE) : _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      _slot->getDirection() == 0 ? _slot->decSpeed(amount, SRC_THROTTLE) : _slot->incSpeed(amount, SRC_THROTTLE);
       if ( _slot->getSpeed() == 0 ) incReverser();
       break;
     case DriveMode::drvAC:
-      if ( _reverser != 0) _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      if ( _reverser != 0) _slot->incSpeed(amount, SRC_THROTTLE);
       break;
   }
 }
 
-void ThrottleClass::decDrive() {
+void ThrottleClass::decDrive(uint8_t amount) {
   switch (_driveMode) {
     case DriveMode::drvCAB:
       if ( _throttle > 0 ) _throttle--; 
@@ -76,11 +76,11 @@ void ThrottleClass::decDrive() {
       break;
     case DriveMode::drvDC:
       if ( _slot->getSpeed() == 0 ) decReverser();
-      _slot->getDirection() == 0 ? _slot->incSpeed(SPEED_AMOUNT, SRC_THROTTLE) : _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      _slot->getDirection() == 0 ? _slot->incSpeed(amount, SRC_THROTTLE) : _slot->decSpeed(amount, SRC_THROTTLE);
       if ( _slot->getSpeed() == 0 ) decReverser();
       break;
     case DriveMode::drvAC:
-      _slot->decSpeed(SPEED_AMOUNT, SRC_THROTTLE);
+      _slot->decSpeed(amount, SRC_THROTTLE);
       break;
   }
 }
@@ -90,8 +90,9 @@ void ThrottleClass::chgFunction(uint8_t function) {
   _slot->setFunction(function, !current, SRC_THROTTLE);
 }
 
-void ThrottleClass::EmergencyStop() {
+void ThrottleClass::EmergencyStop(uint8_t src) {
   _throttle = 0;
+  _slot->setSpeed(0, src);
 }
 
 void ThrottleClass::check() {

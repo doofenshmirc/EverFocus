@@ -39,8 +39,8 @@ class ThrottleClass {
     
     int8_t getThrottle() { return _throttle; }
     
-    void incDrive();
-    void decDrive();
+    void incDrive(uint8_t amount);
+    void decDrive(uint8_t amount);
 
     uint8_t getDriveMode() { return _driveMode; }
     void setDriveMode(uint8_t driveMode) { _driveMode = driveMode; }
@@ -52,7 +52,7 @@ class ThrottleClass {
 
     void chgFunction(uint8_t function);
 
-    void EmergencyStop();
+    void EmergencyStop(uint8_t src);
 
     void check();
 

@@ -41,7 +41,7 @@ void LocoNetInterfaceClass::setPower(uint8_t power) {
   reportPower(&bus, power);
 }
 
-void LocoNetInterfaceClass::EmergencyStop() {
+void LocoNetInterfaceClass::EmergencyStop(uint8_t src) {
   send(OPC_IDLE, 0, 0);
 }
 

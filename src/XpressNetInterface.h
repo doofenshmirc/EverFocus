@@ -15,7 +15,7 @@ class XpressNetInterfaceClass : public XpressNetMasterClass {
 //    void sendSwitch(uint16_t addr, uint8_t out, uint8_t dir);
 //    void sendSensor(uint16_t addr, uint8_t state);
     void setPower(uint8_t power);
-    void EmergencyStop();
+    void EmergencyStop(uint8_t src);
 };
 
 extern XpressNetInterfaceClass XpressNetInterface;

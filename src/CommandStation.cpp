@@ -19,6 +19,7 @@ CharacterDisplayRenderer renderer(&lcdAdapter, LCD_COLS, LCD_ROWS);
 LcdMenu menu(renderer);
 NewEncoder encoder(ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_SW1_PIN, ENCODER_SW2_PIN, ENCODER_SW3_PIN, ENCODER_SWD_PIN, -20, 20, 0, FULL_PULSE);
 I2CKeyPad8x8 keyPad(0x20);
+JoyClass joy(JOY_X_PIN, JOY_Y_PIN);
 uint32_t lastIndex = 64;
 
 //###########   MENU  ##############################
@@ -37,21 +38,21 @@ uint8_t uint8Input3 = 0;
 std::vector<const char*> trackType = {"MAIN", "PROG", "DC", "DCX", "NONE"};
 std::vector<const char*> locoList;
 std::vector<const char*> driveMode = {"AC", "DC", "CAB"};
-std::vector<const char*> buttonList = {"Display", "Rec", "Select", "Stop", "Mode", "Play", "Zoom", "Pause", "Seq", "Copy", "Search", "Call", "1", "4", "2", "5", "3", "6", "7", "Clr", "8", "0", "9", "Enter" "DRV", "CAM" };
-std::map<uint8_t, uint8_t> buttonCode = { {0, 7}, {1, 0}, {2, 63}, {3, 56}, {4, 15}, {5, 8}, {6, 55}, {7, 48}, {8, 23}, {9, 16}, {10, 47}, {11, 40}, {12, 21}, {13, 18}, {14, 45}, {15, 42}, {16, 29}, {17, 26}, {18, 22}, {19, 17}, {20, 46}, {21, 41}, {22, 30}, {23, 25}, {24, 2}, {25, 10} };
-std::map<uint8_t, uint8_t> buttonIndex = { {7, 0}, {0, 1}, {63, 2}, {56, 3}, {15, 4}, {8, 5}, {55, 6}, {48, 7}, {23, 8}, {16, 9}, {47, 10}, {40, 11}, {21, 12}, {18, 13}, {45, 14}, {42, 15}, {29, 16}, {26, 17}, {22, 18}, {17, 19}, {46, 20}, {41, 21}, {30, 22}, {25, 23}, {2, 24}, {10, 25} };
+std::vector<const char*> buttonList = {"Display", "Rec", "Select", "Stop", "Mode", "Play", "Zoom", "Pause", "Seq", "Copy", "Search", "Call", "Auto", "Hold", "1", "4", "2", "5", "3", "6", "7", "Clr", "8", "0", "9", "Enter"};
+std::map<uint8_t, uint8_t> buttonCode = { {0, 7}, {1, 0}, {2, 63}, {3, 56}, {4, 15}, {5, 8}, {6, 55}, {7, 48}, {8, 23}, {9, 16}, {10, 47}, {11, 40}, {12, 3}, {13, 5}, {14, 21}, {15, 18}, {16, 45}, {17, 42}, {18, 29}, {19, 26}, {20, 22}, {21, 17}, {22, 46}, {23, 41}, {24, 30}, {25, 25} };
+std::map<uint8_t, uint8_t> buttonIndex = { {7, 0}, {0, 1}, {63, 2}, {56, 3}, {15, 4}, {8, 5}, {55, 6}, {48, 7}, {23, 8}, {16, 9}, {47, 10}, {40, 11}, {3, 12}, {5, 13}, {21, 14}, {18, 15}, {45, 16}, {42, 17}, {29, 18}, {26, 19}, {22, 20}, {17, 21}, {46, 22}, {41, 23}, {30, 24}, {25, 25} };
 
 MENU_SCREEN(mainMenuScreen, mainMenuItems,
-  ITEM_SUBMENU("Locomotive manager", locoManagerMenuScreen),
+  ITEM_SUBMENU("Loco manager", locoManagerMenuScreen),
   ITEM_SUBMENU("Throttle manager", throttleManagerMenuScreen),
   ITEM_SUBMENU("Track manager", trackManagerMenuScreen),
-  ITEM_COMMAND("Restore config data", []() { CommandStation.restoreData(); } ),
-  ITEM_COMMAND("Store config data", []() { CommandStation.storeData(); } )
+  ITEM_COMMAND("Restore config data", []() { CommandStation.restoreConfig(); } ),
+  ITEM_COMMAND("Store config data", []() { CommandStation.storeConfig(); } )
 );
 
 MENU_SCREEN(locoManagerMenuScreen, locoManagerMenuItems,
-  ITEM_COMMAND("Locomotives", []() { CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen);} ),
-  ITEM_COMMAND("Add locomotive", []() { CommandStation.updateLocoInputMenu(0); menu.setScreen(locoInputMenuScreen); menu.reset(); } ),
+  ITEM_COMMAND("Locos", []() { CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen);} ),
+  ITEM_COMMAND("Add loco", []() { CommandStation.updateLocoInputMenu(0); menu.setScreen(locoInputMenuScreen); menu.reset(); } ),
   ITEM_COMMAND("Import from DCC-EX", []() { DCCEXInterface.requestRosterList(); } ),
   ITEM_BACK()
 );
@@ -118,15 +119,26 @@ void CommandStationClass::init() {
   lcd.init();
   lcd.backlight();
   lcd.createChar(2, lcdLineChar);
-  lcd.setCursor(5, 0);
-  lcd.printf("%s", CS_NAME);
-  lcd.setCursor(2, 1);
-  lcd.printf("%s", "Load config data");
+  lcd.setCursor(0, 0);
+  lcd.printf("Load config data    ");
+  lcd.setCursor(0, 1);
+  lcd.printf("                    ");
+
+  restoreConfig();
+
+  if ( _wifi ) {
+    lcd.setCursor(0, 0);
+    lcd.printf("WiFi: %14s", WIFI_SSID);
+    LOG_STREAM.printf("Connecting to WiFi (%s)...\n", WIFI_SSID);
+    
+    WiFi.begin(_wifiSSID.c_str(), _wifiPass.c_str());
+    while (WiFi.status() != WL_CONNECTED) delay(1000);
+    
+    lcd.setCursor(0, 0);
+    lcd.printf("WiFi: %d.%d.%d.%d    ", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+    LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+  }
   
-  restoreData();
-
-  DCCEXInterface.setTracksType();
-
   encoder.begin();
   renderer.begin();
   menu.setScreen(mainMenuScreen);
@@ -265,7 +277,7 @@ ThrottleClass *CommandStationClass::addThrottle(uint16_t addr, uint8_t driveMode
   SlotClass *slot = addSlot(addr, 0);
   LocoClass *loco = getLocoByAddress(addr); 
   ThrottleClass *throttle = getThrottleByAddress(addr);
-Serial.printf("CommandStationClass::addThrottle a=%d d=%d b=%d\n", addr, driveMode, button);
+
   if (!throttle) { 
     throttle = new ThrottleClass(slot, loco, driveMode, button); 
   } else {
@@ -379,24 +391,25 @@ void CommandStationClass::setPower(uint8_t power, uint8_t src) {
 }
 
 void CommandStationClass::EmergencyStop(uint8_t src) {
-  if ( src != SRC_DCCEX ) DCCEXInterface.EmergencyStop();
-  if ( src != SRC_LOCONET ) LocoNetInterface.EmergencyStop();
-  if ( src != SRC_XPRESSNET ) XpressNetInterface.EmergencyStop();
-  for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) t->EmergencyStop();
+  if ( src != SRC_DCCEX ) DCCEXInterface.EmergencyStop(src);
+  if ( src != SRC_LOCONET ) LocoNetInterface.EmergencyStop(src);
+  if ( src != SRC_XPRESSNET ) XpressNetInterface.EmergencyStop(src);
+  for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) t->EmergencyStop(src);
 }
 
 void CommandStationClass::inputLoop() {
   NewEncoder::EncoderState currentEncoderState;
   encoder.getState(currentEncoderState);
   uint8_t index = keyPad.getKey();
-  
-  if (_operationMode == OperationMode::opMenu ) { 
+  uint8_t joy_command= joy.getCommand();
+
+  if (_operationMode == OperationMode::opMenu ) {   //Menu mode
     switch ( currentEncoderState.currentClick ) {   //Encoder rotary
       case NewEncoder::DownClick:
-        menu.process(UP);
+        menu.process(DOWN);
         break;
       case NewEncoder::UpClick:
-        menu.process(DOWN);
+        menu.process(UP);
         break;
       case NewEncoder::NoClick:
       break;
@@ -405,12 +418,29 @@ void CommandStationClass::inputLoop() {
     switch ( currentEncoderState.currentButton ) {   //Encoder button
       case NewEncoder::DownButton:
         menu.process(UP);
+        sleep(1);
         break;
       case NewEncoder::UpButton:
         menu.process(DOWN);
+        sleep(1);
         break;
       case NewEncoder::NoButton:
       break;
+    }
+
+    switch ( joy_command ) {                          //Joystick
+      case joyLeft:
+        menu.process(BACK);
+        break;
+      case joyRight:
+        menu.process(ENTER);
+        break;
+      case joyUp:
+        menu.process(UP);
+        break;
+      case joyDown:
+        menu.process(DOWN);
+        break;
     }
 
     if (lastIndex != index ) {
@@ -491,6 +521,7 @@ void CommandStationClass::inputLoop() {
           break;
 
         case BTN_MON:
+          getPower() ? setPower(0, SRC_THROTTLE) : setPower(1, SRC_THROTTLE);
           EmergencyStop(SRC_THROTTLE);
           break;
 
@@ -501,29 +532,61 @@ void CommandStationClass::inputLoop() {
           break;
       }
     }
-  } else if (_operationMode == OperationMode::opDrive ) {
-    switch ( currentEncoderState.currentClick ) {   //Encoder rotary
-      case NewEncoder::DownClick:
-        if (_leftThrottle) _leftThrottle->decDrive();
+  } else if (_operationMode == OperationMode::opDrive ) {        //Drive mode
+    if (_leftThrottle) {
+      switch ( currentEncoderState.currentClick ) {   //Encoder rotary
+        case NewEncoder::DownClick:
+          _leftThrottle->incDrive(SPEED_AMOUNT);
+          break;
+        case NewEncoder::UpClick:
+          _leftThrottle->decDrive(SPEED_AMOUNT);
+          break;
+        case NewEncoder::NoClick:
         break;
-      case NewEncoder::UpClick:
-        if (_leftThrottle) _leftThrottle->incDrive();
-        break;
-      case NewEncoder::NoClick:
-      break;
-    }
+      }
 
-    switch ( currentEncoderState.currentButton ) {   //Encoder button
-      case NewEncoder::DownButton:
-        if (_leftThrottle) _leftThrottle->decReverser();
+      switch ( currentEncoderState.currentButton ) {   //Encoder button
+        case NewEncoder::DownButton:
+          _leftThrottle->decReverser();
+          sleep(1);
+          break;
+        case NewEncoder::UpButton:
+          _leftThrottle->incReverser();
+          sleep(1);
+          break;
+        case NewEncoder::NoButton:
         break;
-      case NewEncoder::UpButton:
-        if (_leftThrottle) _leftThrottle->incReverser();
-        break;
-      case NewEncoder::NoButton:
-      break;
+      }
     }
     
+    if (_rightThrottle) {
+      switch ( joy_command ) {                          //Joystick
+        case joyLeft:
+          _rightThrottle->decReverser();
+          break;
+        case joyRight:
+          _rightThrottle->incReverser();
+          break;
+      }
+      if (_rightThrottle->getDriveMode() == DriveMode::drvCAB ) {
+        switch ( joy_command ) {
+          case joyUp:
+            _rightThrottle->incDrive(SPEED_AMOUNT);
+            break;
+          case joyDown:
+            _rightThrottle->decDrive(SPEED_AMOUNT);
+            break;
+        }
+      }
+      else {
+        int16_t deltaY=joy.getDeltaY();
+        uint8_t speed_amount = map(abs(deltaY), 0, 2048, 0, 5);
+
+        if ( deltaY > 150 ) { _rightThrottle->decDrive(speed_amount); }
+        if ( deltaY < -150 ) { _rightThrottle->incDrive(speed_amount); }
+      }
+    }
+
     if (lastIndex != index ) {
       switch (index)                                //Keyboard
       {
@@ -537,38 +600,34 @@ void CommandStationClass::inputLoop() {
         case BTN_ZOOM:
         case BTN_SEQ:
         case BTN_SEARCH:
-        case BTN_1:
+        case BTN_AUTO:
         case BTN_2:
         case BTN_3:
         case BTN_7:
         case BTN_8:
         case BTN_9:
-        case BTN_DRV:
           _leftThrottle = getThrottleByButton(index);
           break;
+        case BTN_DRV:
+          _leftThrottle = _rightThrottle;
+          break;        
         case BTN_FOCUSN:
-          if (_leftThrottle) _leftThrottle->incReverser();
-          break;
-        case BTN_HOLD:
-          if (_leftThrottle) _leftThrottle->decReverser();
+          if (_leftThrottle) _leftThrottle->decDrive(SPEED_AMOUNT);     
           break;
         case BTN_IRIS1:
-          if (_leftThrottle) _leftThrottle->incDrive();
-          break;
-        case BTN_IRIS2:
-          if (_leftThrottle) _leftThrottle->decDrive();
-          break;
-        case BTN_AUTO:
           if (_leftThrottle) _leftThrottle->chgFunction(0);
           break;
-        case BTN_FOCUSF:
-          if (_leftThrottle) _leftThrottle->chgFunction(1);
+        case BTN_IRIS2:
+          if (_leftThrottle) _leftThrottle->decReverser();
+          break;
+         case BTN_FOCUSF:
+          if (_leftThrottle) _leftThrottle->incDrive(SPEED_AMOUNT);      _leftThrottle->chgFunction(1);
           break;
         case BTN_ZOOMIN:
-          if (_leftThrottle) _leftThrottle->chgFunction(2);
+          if (_leftThrottle) _leftThrottle->chgFunction(1);
           break;
         case BTN_ZOOMOUT:
-          if (_leftThrottle) _leftThrottle->chgFunction(3);
+          if (_leftThrottle) _leftThrottle->incReverser();     _leftThrottle->chgFunction(3);
           break;
 
         case BTN_REC:
@@ -577,14 +636,17 @@ void CommandStationClass::inputLoop() {
         case BTN_PAUSE:
         case BTN_COPY:
         case BTN_CALL:
+        case BTN_HOLD:
         case BTN_4:
         case BTN_5:
         case BTN_6:
         case BTN_CLR:
         case BTN_0:
         case BTN_ENTER:
-        case BTN_CAM:
           _rightThrottle = getThrottleByButton(index);
+          break;
+        case BTN_CAM:
+          _rightThrottle = _leftThrottle;
           break;
         case BTN_HOME:
           if (_rightThrottle) _rightThrottle->incReverser();
@@ -593,13 +655,16 @@ void CommandStationClass::inputLoop() {
           if (_rightThrottle) _rightThrottle->decReverser();
           break;
         case BTN_TOUR:
-          if (_rightThrottle) _rightThrottle->incDrive();
+          if (_rightThrottle) _rightThrottle->incDrive(SPEED_AMOUNT);
           break;
         case BTN_SET:
-          if (_rightThrottle) _rightThrottle->decDrive();
+          if (_rightThrottle) _rightThrottle->decDrive(SPEED_AMOUNT);
           break;
         case BTN_POSITION:
           if (_rightThrottle) _rightThrottle->chgFunction(0);
+          break;
+        case BTN_APAN:
+          if (_rightThrottle) _rightThrottle->chgFunction(1);
           break;
         case BTN_F1:
           if (_rightThrottle) _rightThrottle->chgFunction(1);
@@ -693,6 +758,7 @@ void CommandStationClass::inputLoop() {
           if (_rightThrottle) _rightThrottle->chgFunction(9);
           break;
         case BTN_MON:
+          getPower() ? setPower(0, SRC_THROTTLE) : setPower(1, SRC_THROTTLE);
           EmergencyStop(SRC_THROTTLE);
           break;
       }
@@ -736,12 +802,16 @@ void CommandStationClass::throttleLoop() {
 }
 
 void CommandStationClass::displayLoop() {
+  uint8_t powerStateIndicator;
+
+  getPower() ? powerStateIndicator=2 : powerStateIndicator=32;
+
   if ( _operationMode == OperationMode::opDrive ) {
     menu.hide();
 
     lcd.setCursor(0,0);
-    if (_leftThrottle) lcd.printf("%-9s%c", _leftThrottle->getName(), byte(2)); 
-    else lcd.printf("         %c", byte(2));
+    if (_leftThrottle) lcd.printf("%-9s%c", _leftThrottle->getName(), byte(powerStateIndicator)); 
+    else lcd.printf("         %c", byte(powerStateIndicator));
     if (_rightThrottle) lcd.printf(" %-9s", _rightThrottle->getName()); 
     else lcd.printf("          ");
 
@@ -760,19 +830,19 @@ void CommandStationClass::displayLoop() {
           break;
       }
       if ( _leftThrottle->getDriveMode() == DriveMode::drvDC ) {
-        lcd.printf("%cDC   %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
+        lcd.printf("%cDC   %3d%c", rev, _leftThrottle->getSpeed(), byte(powerStateIndicator));
       }
       if ( _leftThrottle->getDriveMode() == DriveMode::drvAC ) {
-        lcd.printf("%cAC   %3d%c", rev, _leftThrottle->getSpeed(), byte(2));
+        lcd.printf("%cAC   %3d%c", rev, _leftThrottle->getSpeed(), byte(powerStateIndicator));
       }
       if ( _leftThrottle->getDriveMode() == DriveMode::drvCAB ) {
         if ( _leftThrottle->getBrake() == 0 ) {
-          lcd.printf("%cT%-3d %3d%c", rev, _leftThrottle->getTargetSpeed(), _leftThrottle->getSpeed(), byte(2));
+          lcd.printf("%cT%-3d %3d%c", rev, _leftThrottle->getTargetSpeed(), _leftThrottle->getSpeed(), byte(powerStateIndicator));
         } else {
-          lcd.printf("%cB%-3d %3d%c", rev, _leftThrottle->getBrake(), _leftThrottle->getSpeed(), byte(2));
+          lcd.printf("%cB%-3d %3d%c", rev, _leftThrottle->getBrake(), _leftThrottle->getSpeed(), byte(powerStateIndicator));
         }
       }
-    } else lcd.printf("         %c", byte(2));
+    } else lcd.printf("         %c", byte(powerStateIndicator));
     if (_rightThrottle) {
       char rev;
       switch ( _rightThrottle->getReverser() ) {
@@ -804,13 +874,13 @@ void CommandStationClass::displayLoop() {
     menu.hide();
 
     lcd.setCursor(0,0);
-    if (_leftThrottle) lcd.printf("012345678%c", byte(2)); 
-    else lcd.printf("         %c", byte(2));
+    if (_leftThrottle) lcd.printf("012345678%c", byte(powerStateIndicator)); 
+    else lcd.printf("         %c", byte(powerStateIndicator));
     if (_rightThrottle) lcd.printf(" 012345678"); 
     else lcd.printf("          ");
     lcd.setCursor(0,1);
-    if (_leftThrottle) lcd.printf("%s%s%s%s%s%s%s%s%s%c", BOOL_STR(_leftThrottle->getFunction(0)), BOOL_STR(_leftThrottle->getFunction(1)), BOOL_STR(_leftThrottle->getFunction(2)), BOOL_STR(_leftThrottle->getFunction(3)), BOOL_STR(_leftThrottle->getFunction(4)), BOOL_STR(_leftThrottle->getFunction(5)), BOOL_STR(_leftThrottle->getFunction(6)), BOOL_STR(_leftThrottle->getFunction(7)), BOOL_STR(_leftThrottle->getFunction(8)), byte(2));
-    else lcd.printf("         %c", byte(2));
+    if (_leftThrottle) lcd.printf("%s%s%s%s%s%s%s%s%s%c", BOOL_STR(_leftThrottle->getFunction(0)), BOOL_STR(_leftThrottle->getFunction(1)), BOOL_STR(_leftThrottle->getFunction(2)), BOOL_STR(_leftThrottle->getFunction(3)), BOOL_STR(_leftThrottle->getFunction(4)), BOOL_STR(_leftThrottle->getFunction(5)), BOOL_STR(_leftThrottle->getFunction(6)), BOOL_STR(_leftThrottle->getFunction(7)), BOOL_STR(_leftThrottle->getFunction(8)), byte(powerStateIndicator));
+    else lcd.printf("         %c", byte(powerStateIndicator));
     if (_rightThrottle) lcd.printf(" %s%s%s%s%s%s%s%s%s", BOOL_STR(_rightThrottle->getFunction(0)), BOOL_STR(_rightThrottle->getFunction(1)), BOOL_STR(_rightThrottle->getFunction(2)), BOOL_STR(_rightThrottle->getFunction(3)), BOOL_STR(_rightThrottle->getFunction(4)), BOOL_STR(_rightThrottle->getFunction(5)), BOOL_STR(_rightThrottle->getFunction(6)), BOOL_STR(_rightThrottle->getFunction(7)), BOOL_STR(_rightThrottle->getFunction(8)) );
     else lcd.printf("          ");
   } else if ( _operationMode == OperationMode::opMenu ) {
@@ -825,80 +895,86 @@ void CommandStationClass::check() {
   displayLoop();
 }
 
-void CommandStationClass::storeData() {
+void CommandStationClass::storeConfig() {
+  Preferences preferences;
   uint16_t i;
 
-  _preferences.begin(CS_NAME, false);
-  _preferences.clear();
+  preferences.begin("CommandStation", false);
+  preferences.clear();
  
+  preferences.putUInt("w", _wifi);
+  preferences.putString("ws", _wifiSSID);
+  preferences.putString("wp", _wifiPass);
+
   //Locos data
   i = 0;
   for (LocoClass *l = _locos->getFirst(); l; l = l->getNext()) {
     String prefix = "l" + String(i);
-    _preferences.putUInt((prefix + "a").c_str(), l->getAddress());
-    _preferences.putString((prefix + "n").c_str(), l->getName());
+    preferences.putUInt((prefix + "a").c_str(), l->getAddress());
+    preferences.putString((prefix + "n").c_str(), l->getName());
     i++;
   }  
-  _preferences.putUInt("lc", i);
+  preferences.putUInt("lc", i);
   
   //Throttles data
   i = 0;
   for (ThrottleClass *t = _throttles->getFirst(); t; t = t->getNext()) {
     String prefix = "t" + String(i);
-    _preferences.putUInt((prefix + "a").c_str(), t->getAddress());
-    _preferences.putUInt((prefix + "d").c_str(), t->getDriveMode());
-    _preferences.putUInt((prefix + "b").c_str(), t->getButton());
+    preferences.putUInt((prefix + "a").c_str(), t->getAddress());
+    preferences.putUInt((prefix + "d").c_str(), t->getDriveMode());
+    preferences.putUInt((prefix + "b").c_str(), t->getButton());
     i++;
   }
-  _preferences.putUInt("tc", i);
-  if (_leftThrottle) _preferences.putUInt("lta", _leftThrottle->getAddress());
-  if (_rightThrottle) _preferences.putUInt("rta", _rightThrottle->getAddress());
+  preferences.putUInt("tc", i);
+  if (_leftThrottle) preferences.putUInt("lta", _leftThrottle->getAddress());
+  if (_rightThrottle) preferences.putUInt("rta", _rightThrottle->getAddress());
 
-  //Tracks data
-  _preferences.putUInt("traa", DCCEXInterface.trackAAddr);
-  _preferences.putUInt("trat", DCCEXInterface.trackAType);
-  _preferences.putUInt("trba", DCCEXInterface.trackBAddr);
-  _preferences.putUInt("trbt", DCCEXInterface.trackBType);
-  _preferences.putUInt("trca", DCCEXInterface.trackCAddr);
-  _preferences.putUInt("trct", DCCEXInterface.trackCType);
-  _preferences.putUInt("trda", DCCEXInterface.trackDAddr);
-  _preferences.putUInt("trdt", DCCEXInterface.trackDType);
+  preferences.end();
 
-  _preferences.end();
+  DCCEXInterface.storeConfig();
 }
 
-void CommandStationClass::restoreData() {
-  _preferences.begin(CS_NAME, true);
-    
+void CommandStationClass::restoreConfig() {
+  Preferences preferences;
+
+  preferences.begin("CommandStation", false);
+
+  _wifi = preferences.getUInt("w", WIFI);
+  _wifiSSID = preferences.getString("ws", WIFI_SSID);
+  _wifiPass = preferences.getString("wp", WIFI_PASS);
+
   //Locos data
-  uint16_t count = _preferences.getUInt("lc");
-  Serial.printf("Store locomotives number: %d\n", count);
+  uint16_t count = preferences.getUInt("lc");
   for (int i = 0; i < count; i++) {
     String prefix = "l" + String(i);
-    addLoco(_preferences.getUInt((prefix + "a").c_str()), _preferences.getString((prefix + "n").c_str()).c_str());
+    uint16_t addr = preferences.getUInt((prefix + "a").c_str());
+
+    Serial.printf("Add loco %s (%d) to roster\n", preferences.getString((prefix + "n").c_str()).c_str(), addr);
+    addLoco(addr, preferences.getString((prefix + "n").c_str()).c_str());
+    delay(100);
   }
 
   //Throttles data
-  count = _preferences.getUInt("tc");
-  Serial.printf("Store throttles number: %d\n", count);
+  count = preferences.getUInt("tc");
   for (int i = 0; i < count; i++) {
     String prefix = "t" + String(i);
-    addThrottle(_preferences.getUInt((prefix + "a").c_str()), _preferences.getUInt((prefix + "d").c_str()), _preferences.getUInt((prefix + "b").c_str()));
+    uint16_t addr = preferences.getUInt((prefix + "a").c_str());
+    uint8_t driveMode = preferences.getUInt((prefix + "d").c_str());
+    uint8_t button = preferences.getUInt((prefix + "b").c_str());
+
+    Serial.printf("Add throttle for loco (%d) mode (%d) button (%d)\n", addr, driveMode, button);
+    addThrottle(addr, driveMode, button);
+    delay(100);
   }
-  _leftThrottle = getThrottleByAddress(_preferences.getUInt("lta", 0));
-  _rightThrottle = getThrottleByAddress(_preferences.getUInt("rta", 0));
+
+  _leftThrottle = getThrottleByAddress(preferences.getUInt("lta", 0));
+  _rightThrottle = getThrottleByAddress(preferences.getUInt("rta", 0));
 
   //Tracks data
-  DCCEXInterface.trackAAddr = _preferences.getUInt("traa", 0);
-  DCCEXInterface.trackAType = _preferences.getUInt("trat", 0);
-  DCCEXInterface.trackBAddr = _preferences.getUInt("trba", 0);
-  DCCEXInterface.trackBType = _preferences.getUInt("trbt", 1);
-  DCCEXInterface.trackCAddr = _preferences.getUInt("trca", 0);
-  DCCEXInterface.trackCType = _preferences.getUInt("trct", 4);
-  DCCEXInterface.trackDAddr = _preferences.getUInt("trda", 0);
-  DCCEXInterface.trackDType = _preferences.getUInt("trdt", 4);
    
-  _preferences.end();
+  preferences.end();
+
+  DCCEXInterface.restoreConfig();
 }
 
 // private methods
@@ -965,3 +1041,59 @@ ThrottleClass *CommandStationClass::getThrottleByButton(uint8_t button) {
 }
 
 CommandStationClass CommandStation = CommandStationClass();
+
+void setup() {
+  Stream *client;
+
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.printf("%-20s", CS_NAME);
+  lcd.setCursor(0, 1);
+  lcd.printf("Version: %-11s", VERSION);
+  delay(2000);
+
+  DCCEX_STREAM.begin(115200);
+  LOG_STREAM.begin(115200);
+
+  CommandStation.init();
+  
+  /*if ( CommandStation.getWifi() )
+  {
+  lcd.setCursor(0, 0);
+  lcd.printf("WiFi: %14s", WIFI_SSID);
+  LOG_STREAM.printf("Connecting to WiFi (%s)...\n", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) delay(1000);
+  lcd.setCursor(0, 0);
+  wifiAddress = WiFi.localIP();
+  lcd.printf("WiFi: %d.%d.%d.%d    ", wifiAddress[0], wifiAddress[1], wifiAddress[2], wifiAddress[3]);
+  LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", wifiAddress[0], wifiAddress[1], wifiAddress[2], wifiAddress[3]);
+
+  lcd.setCursor(0, 1);
+  lcd.printf("DCCEX: %d.%d.%d.%d    ", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3]);
+  LOG_STREAM.println("Connecting to DCCEX...\n");
+  if (!DCCEX_STREAM.connect(DCCEX_ADDRESS, DCCEX_PORT)) {
+    lcd.setCursor(0, 0);
+    lcd.printf("DCCEX not available!");
+    LOG_STREAM.println("DCCEX not available");
+  }
+  lcd.setCursor(0, 0);
+  lcd.printf("Connected to DCCEX  ");
+  LOG_STREAM.println("Connected to DCCEX");
+  } else 
+    #define DCCEX_STREAM Serial2
+    DCCEX_STREAM.begin(115200);
+  }
+  delay(2000);
+*/
+  LocoNetInterface.init();
+  DCCEXInterface.init(CommandStation.getWifi());
+  XpressNetInterface.setup(Loco128, XNETPOPRT, XNETCONTROL);
+}
+
+void loop() {
+  DCCEXInterface.check();
+  XpressNetInterface.update();
+  CommandStation.check();
+}

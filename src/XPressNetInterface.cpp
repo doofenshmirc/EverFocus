@@ -30,7 +30,7 @@ void XpressNetInterfaceClass::setPower(uint8_t power) {
   power==PowerOff ? XpressNetMasterClass::setPower(csTrackVoltageOff) : XpressNetMasterClass::setPower(csNormal);
 }
 
-void XpressNetInterfaceClass::EmergencyStop() {
+void XpressNetInterfaceClass::EmergencyStop(uint8_t src) {
   XpressNetMasterClass::setPower(csEmergencyStop);
 }
 
