@@ -8,7 +8,8 @@
 #include "Slot.h"
 #include "Joy.h"
 
-#include <ItemInput.h>
+#include <ItemValue.h>
+#include <ItemBool.h>
 #include <ItemBack.h>
 #include <ItemCommand.h>
 #include <ItemList.h>
@@ -42,17 +43,13 @@ enum OperationMode {
 
 class CommandStationClass {
   public:
-    CommandStationClass();
+    bool wifi = WIFI;
+    String wifiSSID = WIFI_SSID;
+    String wifiPass = WIFI_PASS;
 
+    CommandStationClass();
     void init();
     
-    bool getWifi() { return _wifi; };
-    void setWifi(bool status) { _wifi = status; };
-    String getWifiSSID() { return _wifiSSID; };
-    void setWifiSSID(String ssid) { _wifiSSID = ssid; };
-    String getWifiPass() { return _wifiPass; };
-    void setWifiPass(String pass) { _wifiPass = pass; };
-
     uint16_t getSlotAddress(uint8_t id);
 
     SlotClass *addSlot(uint16_t addr, uint8_t id);
@@ -99,15 +96,13 @@ class CommandStationClass {
     void throttleLoop();
     void displayLoop();
 
-    void storeConfig();
-    void restoreConfig();
+    void saveConfig();
+    void loadConfig();
 
     void check();
 
   private:
-    bool _wifi;
-    String _wifiSSID;
-    String _wifiPass;
+    LiquidCrystal_I2C *_lcd;
     OperationMode _operationMode = OperationMode::opDrive;
     uint8_t _power;
     SlotClass *_slots = nullptr;

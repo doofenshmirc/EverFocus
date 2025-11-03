@@ -3,27 +3,38 @@
 DCCEXInterfaceClass::DCCEXInterfaceClass() {
 }
 
-void DCCEXInterfaceClass::init(bool wifi) {
-  restoreConfig();
+void DCCEXInterfaceClass::init(LiquidCrystal_I2C *lcd, bool wifi) {
+  loadConfig();
 
   _dccex.setLogStream(&LOG_STREAM);
   _dccex.setDelegate(&DCCEXInterface);
+  lcd->setCursor(0, 0);
+  lcd->printf("Connecting to DCC-EX");
+
   if (wifi) {
-    LOG_STREAM.printf("Connecting to DCCEX server...\n");
+    lcd->setCursor(0, 1);
+    lcd->printf("via tcp port        ");
+    LOG_STREAM.printf("Connecting to DCC-EX (%d.%d.%d.%d:%d)\n", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3], dccExPort);
     if (_wifiClient.connect(dccExAddress, dccExPort)) {
       _dccex.connect(&_wifiClient);
       LOG_STREAM.printf("Connected to DCCEX server...\n");
     } else {
-      LOG_STREAM.printf("Connect to DCCEX server failed.\n");
+      lcd->setCursor(0, 1);
+      lcd->printf("via serial port     ");
+      LOG_STREAM.printf("Connection failed, use serial port\n");
       _dccex.connect(&DCCEX_STREAM);
     }
   } else {
+    lcd->setCursor(0, 1);
+    lcd->printf("via serial port     ");
     _dccex.connect(&DCCEX_STREAM);
   }
   _dccex.requestServerVersion();
   _dccex.getLists(true, false, false, false);
 
   setTracksType();
+
+  delay(1000);
 }
 
 void DCCEXInterfaceClass::receivedMessage(char *message) {
@@ -166,11 +177,33 @@ void DCCEXInterfaceClass::EmergencyStop(uint8_t src) {
   _dccex.emergencyStop(); 
 }
 
-void DCCEXInterfaceClass::storeConfig() {
+void DCCEXInterfaceClass::saveConfig() {
+  Preferences preferences;
+  IPAddress dccExAddressDefault = DCCEX_ADDRESS;
 
+  preferences.begin("DCCEXInterface", false);
+  preferences.clear();
+
+  preferences.putUInt("dea0", dccExAddress[0]);
+  preferences.putUInt("dea1", dccExAddress[1]);
+  preferences.putUInt("dea2", dccExAddress[2]);
+  preferences.putUInt("dea3", dccExAddress[3]);
+  preferences.putUInt("dep", dccExPort);
+  
+  //Tracks data
+  preferences.putUInt("traa", trackAAddr);
+  preferences.putUInt("trat", trackAType);
+  preferences.putUInt("trba", trackBAddr);
+  preferences.putUInt("trbt", trackBType);
+  preferences.putUInt("trca", trackCAddr);
+  preferences.putUInt("trct", trackCType);
+  preferences.putUInt("trda", trackDAddr);
+  preferences.putUInt("trdt", trackDType);
+   
+  preferences.end();  
 };
 
-void DCCEXInterfaceClass::restoreConfig() {
+void DCCEXInterfaceClass::loadConfig() {
   Preferences preferences;
   IPAddress dccExAddressDefault = DCCEX_ADDRESS;
 

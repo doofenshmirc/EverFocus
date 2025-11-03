@@ -2,25 +2,26 @@
 #define DCCEXInterface_h
 
 #include "WiFi.h"
+#include "LiquidCrystal_I2C.h"
 #include <DCCEXProtocol.h>
 #include "CommandStation.h"
 #include "diag.h"
 
 class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
   public:
-    int trackAAddr = 0;
-    uint8_t trackAType = 0;
-    int trackBAddr = 0;
-    uint8_t trackBType = 1;
-    int trackCAddr = 1;
-    uint8_t trackCType = 4;
-    int trackDAddr = 2;
-    uint8_t trackDType = 4;
-    IPAddress dccExAddress;
-    uint16_t dccExPort;
+    int trackAAddr = DCCEX_TRACK_A_ADDR;
+    uint8_t trackAType = DCCEX_TRACK_A_TYPE;
+    int trackBAddr = DCCEX_TRACK_B_ADDR;
+    uint8_t trackBType = DCCEX_TRACK_B_TYPE;
+    int trackCAddr = DCCEX_TRACK_C_ADDR;
+    uint8_t trackCType = DCCEX_TRACK_C_TYPE;
+    int trackDAddr = DCCEX_TRACK_D_ADDR;
+    uint8_t trackDType = DCCEX_TRACK_D_TYPE;
+    IPAddress dccExAddress = DCCEX_ADDRESS;
+    uint16_t dccExPort = DCCEX_PORT;
 
     DCCEXInterfaceClass();
-    void init(bool wifi);
+    void init(LiquidCrystal_I2C *lcd, bool wifi);
     void receivedMessage(char *message);
     void receivedServerVersion(int major, int minor, int patch) override;
     void receivedTrackPower(TrackPower state) override;
@@ -38,8 +39,8 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     Loco* getRosterList() { return _dccex.roster; };
     void setTracksType();
     void EmergencyStop(uint8_t src);
-    void storeConfig();
-    void restoreConfig();
+    void saveConfig();
+    void loadConfig();
     void check();
   private:
     WiFiClient _wifiClient;

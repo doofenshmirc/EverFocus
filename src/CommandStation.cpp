@@ -30,6 +30,7 @@ extern MenuScreen *throttleManagerMenuScreen;
 extern MenuScreen *throttleMenuScreen;
 extern MenuScreen *throttleInputMenuScreen;
 extern MenuScreen *trackManagerMenuScreen;
+extern MenuScreen *configMenuScreen;
 char* charInput1 = new char[10];
 char* charInput2 = new char[10];
 uint8_t uint8Input1 = 0;
@@ -46,8 +47,15 @@ MENU_SCREEN(mainMenuScreen, mainMenuItems,
   ITEM_SUBMENU("Loco manager", locoManagerMenuScreen),
   ITEM_SUBMENU("Throttle manager", throttleManagerMenuScreen),
   ITEM_SUBMENU("Track manager", trackManagerMenuScreen),
-  ITEM_COMMAND("Restore config data", []() { CommandStation.restoreConfig(); } ),
-  ITEM_COMMAND("Store config data", []() { CommandStation.storeConfig(); } )
+  ITEM_SUBMENU("Config", configMenuScreen)
+);
+
+
+MENU_SCREEN(configMenuScreen, configMenuItems,
+  ITEM_BOOL_REF("Wifi", CommandStation.wifi, "On", "Off", [](const Ref<bool> value) { /*erial.println(value.value ? "Wifit On" : "Wifi Off");*/ }),
+  ITEM_COMMAND("Load", []() { CommandStation.loadConfig(); DCCEXInterface.loadConfig(); } ),
+  ITEM_COMMAND("Save", []() { CommandStation.saveConfig(); DCCEXInterface.saveConfig(); } ),
+  ITEM_BACK()
 );
 
 MENU_SCREEN(locoManagerMenuScreen, locoManagerMenuItems,
@@ -124,19 +132,31 @@ void CommandStationClass::init() {
   lcd.setCursor(0, 1);
   lcd.printf("                    ");
 
-  restoreConfig();
+  loadConfig();
 
-  if ( _wifi ) {
+  if ( wifi ) {
+    uint16_t wifiTimeout = WIFI_TIMEOUT;
+
     lcd.setCursor(0, 0);
     lcd.printf("WiFi: %14s", WIFI_SSID);
     LOG_STREAM.printf("Connecting to WiFi (%s)...\n", WIFI_SSID);
     
-    WiFi.begin(_wifiSSID.c_str(), _wifiPass.c_str());
-    while (WiFi.status() != WL_CONNECTED) delay(1000);
+    WiFi.begin(wifiSSID.c_str(), wifiPass.c_str());
+    while (WiFi.status() != WL_CONNECTED && wifiTimeout > 0) {
+      wifiTimeout--;
+      delay(1000);
+    }
     
-    lcd.setCursor(0, 0);
-    lcd.printf("WiFi: %d.%d.%d.%d    ", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
-    LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+    lcd.setCursor(0, 1);
+    if ( WiFi.status() == WL_CONNECTED) {
+      lcd.printf("%d.%d.%d.%d    ", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+      LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+    } else { 
+      lcd.printf("failed              ");
+      wifi = false; 
+    }
+
+    delay(1000);
   }
   
   encoder.begin();
@@ -446,17 +466,17 @@ void CommandStationClass::inputLoop() {
     if (lastIndex != index ) {
       switch (index)                                //Keyboard
       {
+        case BTN_ESC:
         case BTN_MENU:
           _operationMode = OperationMode::opDrive;
           break;
 
         case BTN_ENTER:
-        case BTN_APAN:
+        case BTN_HOME:
           menu.process(ENTER);
           break;
   
-        case BTN_ESC:
-        case BTN_POSITION:
+        case BTN_STOP2:
           menu.process(BACK);
           break;
       
@@ -472,11 +492,11 @@ void CommandStationClass::inputLoop() {
           menu.process(DOWN);
           break;
   
-        case BTN_HOME:
+        case BTN_APAN:
           menu.process(RIGHT);
           break;
   
-        case BTN_STOP2:
+        case BTN_POSITION:
           menu.process(LEFT);
           break;
   
@@ -817,7 +837,7 @@ void CommandStationClass::displayLoop() {
 
     lcd.setCursor(0,1);
     if (_leftThrottle) {
-      char rev;
+      char rev = ' ';
       switch ( _leftThrottle->getReverser() ) {
         case -1:
           rev = char(0x7F);
@@ -844,7 +864,7 @@ void CommandStationClass::displayLoop() {
       }
     } else lcd.printf("         %c", byte(powerStateIndicator));
     if (_rightThrottle) {
-      char rev;
+      char rev = ' ';
       switch ( _rightThrottle->getReverser() ) {
         case -1:
           rev = char(0x7F);
@@ -895,16 +915,16 @@ void CommandStationClass::check() {
   displayLoop();
 }
 
-void CommandStationClass::storeConfig() {
+void CommandStationClass::saveConfig() {
   Preferences preferences;
   uint16_t i;
 
   preferences.begin("CommandStation", false);
   preferences.clear();
  
-  preferences.putUInt("w", _wifi);
-  preferences.putString("ws", _wifiSSID);
-  preferences.putString("wp", _wifiPass);
+  preferences.putUInt("w", wifi);
+  preferences.putString("ws", wifiSSID);
+  preferences.putString("wp", wifiPass);
 
   //Locos data
   i = 0;
@@ -931,18 +951,17 @@ void CommandStationClass::storeConfig() {
 
   preferences.end();
 
-  DCCEXInterface.storeConfig();
 }
 
-void CommandStationClass::restoreConfig() {
+void CommandStationClass::loadConfig() {
   Preferences preferences;
 
   preferences.begin("CommandStation", false);
 
-  _wifi = preferences.getUInt("w", WIFI);
-  _wifiSSID = preferences.getString("ws", WIFI_SSID);
-  _wifiPass = preferences.getString("wp", WIFI_PASS);
-
+  wifi = preferences.getUInt("w", WIFI);
+  wifiSSID = preferences.getString("ws", WIFI_SSID);
+  wifiPass = preferences.getString("wp", WIFI_PASS);
+  
   //Locos data
   uint16_t count = preferences.getUInt("lc");
   for (int i = 0; i < count; i++) {
@@ -973,8 +992,6 @@ void CommandStationClass::restoreConfig() {
   //Tracks data
    
   preferences.end();
-
-  DCCEXInterface.restoreConfig();
 }
 
 // private methods
@@ -1043,52 +1060,20 @@ ThrottleClass *CommandStationClass::getThrottleByButton(uint8_t button) {
 CommandStationClass CommandStation = CommandStationClass();
 
 void setup() {
-  Stream *client;
-
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.printf("%-20s", CS_NAME);
   lcd.setCursor(0, 1);
   lcd.printf("Version: %-11s", VERSION);
-  delay(2000);
+  delay(1000);
 
   DCCEX_STREAM.begin(115200);
   LOG_STREAM.begin(115200);
 
-  CommandStation.init();
-  
-  /*if ( CommandStation.getWifi() )
-  {
-  lcd.setCursor(0, 0);
-  lcd.printf("WiFi: %14s", WIFI_SSID);
-  LOG_STREAM.printf("Connecting to WiFi (%s)...\n", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) delay(1000);
-  lcd.setCursor(0, 0);
-  wifiAddress = WiFi.localIP();
-  lcd.printf("WiFi: %d.%d.%d.%d    ", wifiAddress[0], wifiAddress[1], wifiAddress[2], wifiAddress[3]);
-  LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", wifiAddress[0], wifiAddress[1], wifiAddress[2], wifiAddress[3]);
-
-  lcd.setCursor(0, 1);
-  lcd.printf("DCCEX: %d.%d.%d.%d    ", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3]);
-  LOG_STREAM.println("Connecting to DCCEX...\n");
-  if (!DCCEX_STREAM.connect(DCCEX_ADDRESS, DCCEX_PORT)) {
-    lcd.setCursor(0, 0);
-    lcd.printf("DCCEX not available!");
-    LOG_STREAM.println("DCCEX not available");
-  }
-  lcd.setCursor(0, 0);
-  lcd.printf("Connected to DCCEX  ");
-  LOG_STREAM.println("Connected to DCCEX");
-  } else 
-    #define DCCEX_STREAM Serial2
-    DCCEX_STREAM.begin(115200);
-  }
-  delay(2000);
-*/
   LocoNetInterface.init();
-  DCCEXInterface.init(CommandStation.getWifi());
+  CommandStation.init();
+  DCCEXInterface.init(&lcd, CommandStation.wifi);
   XpressNetInterface.setup(Loco128, XNETPOPRT, XNETCONTROL);
 }
 

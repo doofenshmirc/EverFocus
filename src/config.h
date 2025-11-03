@@ -12,14 +12,23 @@
 //#define DEBUG_EVERFOCUS
 
 //Wifi Interface 
-#define WIFI 1
+#define WIFI 0
 #define WIFI_SSID "Vodafone-D6D4"          // WiFi SSID name here
-#define WIFI_PASS "QWswF2vuz85dyacr"    // WiFi password here
+#define WIFI_PASS "QWswF2vuz85dyacr"       // WiFi password here
+#define WIFI_TIMEOUT 10                    // Wifi timeout in secundum
 
 //DCCEX Interface
 #define DCCEX 1  
 #define DCCEX_ADDRESS { 192, 168, 0, 45 }   // IP address of your EX-CommandStation             
-#define DCCEX_PORT 2560                     // Port number of your EX-CommandStation             
+#define DCCEX_PORT 2560                     // Port number of your EX-CommandStation   
+#define DCCEX_TRACK_A_ADDR 0
+#define DCCEX_TRACK_A_TYPE TrackManagerMode::MAIN
+#define DCCEX_TRACK_B_ADDR 0
+#define DCCEX_TRACK_B_TYPE TrackManagerMode::PROG
+#define DCCEX_TRACK_C_ADDR 0
+#define DCCEX_TRACK_C_TYPE TrackManagerMode::NONE
+#define DCCEX_TRACK_D_ADDR 0
+#define DCCEX_TRACK_D_TYPE TrackManagerMode::NONE
 #define DCCEX_STREAM Serial2  
 
 //LocoNet Interface
