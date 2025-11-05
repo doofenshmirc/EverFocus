@@ -1,6 +1,6 @@
 #include "CommandStation.h"
 
-#define VERSION "v1.0.0"
+
 
 byte lcdLineChar[8] = {
   B00001,
@@ -31,11 +31,17 @@ extern MenuScreen *throttleMenuScreen;
 extern MenuScreen *throttleInputMenuScreen;
 extern MenuScreen *trackManagerMenuScreen;
 extern MenuScreen *configMenuScreen;
-char* charInput1 = new char[10];
-char* charInput2 = new char[10];
+extern MenuScreen *wifiMenuScreen;
+extern MenuScreen *dccexMenuScreen;
+char* charInput1 = new char[16];
+char* charInput2 = new char[16];
 uint8_t uint8Input1 = 0;
 uint8_t uint8Input2 = 0;
 uint8_t uint8Input3 = 0;
+int intInput1 = 0;
+int intInput2 = 0;
+int intInput3 = 0;
+int intInput4 = 0;
 std::vector<const char*> trackType = {"MAIN", "PROG", "DC", "DCX", "NONE"};
 std::vector<const char*> locoList;
 std::vector<const char*> driveMode = {"AC", "DC", "CAB"};
@@ -50,41 +56,57 @@ MENU_SCREEN(mainMenuScreen, mainMenuItems,
   ITEM_SUBMENU("Config", configMenuScreen)
 );
 
-
-MENU_SCREEN(configMenuScreen, configMenuItems,
-  ITEM_BOOL_REF("Wifi", CommandStation.wifi, "On", "Off", [](const Ref<bool> value) { /*erial.println(value.value ? "Wifit On" : "Wifi Off");*/ }),
-  ITEM_COMMAND("Load", []() { CommandStation.loadConfig(); DCCEXInterface.loadConfig(); } ),
-  ITEM_COMMAND("Save", []() { CommandStation.saveConfig(); DCCEXInterface.saveConfig(); } ),
-  ITEM_BACK()
-);
-
 MENU_SCREEN(locoManagerMenuScreen, locoManagerMenuItems,
   ITEM_COMMAND("Locos", []() { CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen);} ),
   ITEM_COMMAND("Add loco", []() { CommandStation.updateLocoInputMenu(0); menu.setScreen(locoInputMenuScreen); menu.reset(); } ),
   ITEM_COMMAND("Import from DCC-EX", []() { DCCEXInterface.requestRosterList(); } ),
-  ITEM_BACK()
 );
 
 MENU_SCREEN(throttleManagerMenuScreen, throttleManagerMenuItems,
   ITEM_COMMAND("Throttles", []() { CommandStation.updateThrottleMenu(); menu.setScreen(throttleMenuScreen);} ),
   ITEM_COMMAND("Add throttle", []() { CommandStation.updateThrottleInputMenu(0); menu.setScreen(throttleInputMenuScreen); menu.reset(); } ),
-  ITEM_BACK()
+);
+
+MENU_SCREEN(configMenuScreen, configMenuItems,
+  ITEM_COMMAND("Wifi", []() { sprintf(charInput1, "%s", CommandStation.wifiSSID); sprintf(charInput2, "%s", CommandStation.wifiPass); wifiMenuScreen->setParent(configMenuScreen); menu.setScreen(wifiMenuScreen); } ),
+  ITEM_SUBMENU("DCC-EX", dccexMenuScreen),
+  ITEM_COMMAND("Load", []() { CommandStation.loadConfig(); DCCEXInterface.loadConfig(); menu.setScreen(mainMenuScreen); } ),
+  ITEM_COMMAND("Save", []() { CommandStation.saveConfig(); DCCEXInterface.saveConfig(); menu.setScreen(mainMenuScreen); } ),
+  ITEM_COMMAND("Restart", []() { ESP.restart(); } ),
+);
+
+MENU_SCREEN(wifiMenuScreen, wifiMenuItems,
+  ITEM_BOOL_REF("Wifi", CommandStation.wifi, "On", "Off", nullptr),
+  ITEM_INPUT_CHARSET("SSID", charInput1, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789", [](char *ssid) { CommandStation.wifiSSID = ssid; } ),
+  ITEM_INPUT_CHARSET("Pass", charInput2, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789!@#$%^&*()[]<>?", [](char *pass) { CommandStation.wifiPass = pass; } )
+);
+
+MENU_SCREEN(dccexMenuScreen, dccexMenuItems,
+  ITEM_WIDGET(
+    "IP",
+    nullptr,
+    WIDGET_RANGE_REF(DCCEXInterface.dccExAddress[0], 1, 0, 255, "%3d.", 0, true),
+    WIDGET_RANGE_REF(DCCEXInterface.dccExAddress[1], 1, 0, 255, "%3d.", 0, true),
+    WIDGET_RANGE_REF(DCCEXInterface.dccExAddress[2], 1, 0, 255, "%3d.", 0, true),
+    WIDGET_RANGE_REF(DCCEXInterface.dccExAddress[3], 1, 0, 255, "%3d", 0, true)
+  ),
+  ITEM_WIDGET(
+    "Port",
+    nullptr,
+    WIDGET_RANGE_REF(DCCEXInterface.dccExPort, 1, 0, 65535, "%d", 0, true)
+  ),
 );
 
 MENU_SCREEN(locoMenuScreen, locoMenuItems,
-  ITEM_BACK()
 );
 
 MENU_SCREEN(locoInputMenuScreen, locoInputMenuItems,
-  ITEM_BACK()
 );
 
 MENU_SCREEN(throttleMenuScreen, throttleMenuItems,
-  ITEM_BACK()
 );
 
 MENU_SCREEN(throttleInputMenuScreen, throttleInputMenuItems,
-  ITEM_BACK()
 );
 
 void rangeCallbackA(const Ref<int>& addr) { if (DCCEXInterface.trackAType != 2 && DCCEXInterface.trackAType != 3) DCCEXInterface.trackAAddr = 0; }
@@ -124,13 +146,8 @@ CommandStationClass::CommandStationClass() {
 }
 
 void CommandStationClass::init() {
-  lcd.init();
-  lcd.backlight();
-  lcd.createChar(2, lcdLineChar);
-  lcd.setCursor(0, 0);
-  lcd.printf("Load config data    ");
   lcd.setCursor(0, 1);
-  lcd.printf("                    ");
+  lcd.printf("Load config data ...");
 
   loadConfig();
 
@@ -138,30 +155,36 @@ void CommandStationClass::init() {
     uint16_t wifiTimeout = WIFI_TIMEOUT;
 
     lcd.setCursor(0, 0);
-    lcd.printf("WiFi: %14s", WIFI_SSID);
-    LOG_STREAM.printf("Connecting to WiFi (%s)...\n", WIFI_SSID);
+    lcd.printf("Connecting to Wifi  ", wifiSSID);
+    lcd.setCursor(0, 1);
+    lcd.printf("                    ");
+    lcd.setCursor(0, 1);
+    lcd.printf("%s ", wifiSSID);
+    LOG_STREAM.printf("Connecting to WiFi (%s) ", wifiSSID);
     
     WiFi.begin(wifiSSID.c_str(), wifiPass.c_str());
     while (WiFi.status() != WL_CONNECTED && wifiTimeout > 0) {
+      lcd.printf(".");
+      LOG_STREAM.printf(".");
       wifiTimeout--;
       delay(1000);
     }
     
     lcd.setCursor(0, 1);
     if ( WiFi.status() == WL_CONNECTED) {
-      lcd.printf("%d.%d.%d.%d    ", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
-      LOG_STREAM.printf("Connected (%d.%d.%d.%d)\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+      lcd.printf("addr=%3d.%3d.%3d.%3d    ", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
+      LOG_STREAM.printf(" success, local ip address (%d.%d.%d.%d)\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
     } else { 
-      lcd.printf("failed              ");
+      lcd.printf("failed, use serial  ");
+      LOG_STREAM.printf(" failed, use serial port\n");
       wifi = false; 
     }
 
-    delay(1000);
+    delay(LCD_DELAY);
   }
   
   encoder.begin();
   renderer.begin();
-  menu.setScreen(mainMenuScreen);
 }
 
 void CommandStationClass::updateLocoMenu() {
@@ -174,8 +197,6 @@ void CommandStationClass::updateLocoMenu() {
     const char *name = s;
     locoMenuScreen->addItem(ITEM_COMMAND(name, []() { CommandStation.updateLocoInputMenu(convertStringToUint16(substr(locoMenuScreen->getItemAt(locoMenuScreen->getCursor())->getText(), 11, 4))); menu.setScreen(locoInputMenuScreen); menu.reset(); } ));
   }
-
-  locoMenuScreen->addItem(ITEM_BACK());
 }
 
 void CommandStationClass::updateLocoInputMenu(uint16_t addr) {
@@ -194,7 +215,6 @@ void CommandStationClass::updateLocoInputMenu(uint16_t addr) {
   locoInputMenuScreen->addItem(ITEM_INPUT_CHARSET("Name", charInput2, "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789", [](char *name) { } ));
   locoInputMenuScreen->addItem(ITEM_COMMAND("Add or update", []() { CommandStation.addLoco(convertStringToUint16(charInput1), rtrim(charInput2, ' ')) ; CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen); menu.refresh(); } ));
   locoInputMenuScreen->addItem(ITEM_COMMAND("Remove", []() { CommandStation.delLoco(convertStringToUint16(charInput1)) ; CommandStation.updateLocoMenu(); menu.setScreen(locoMenuScreen); menu.reset(); } ));
-  locoInputMenuScreen->addItem(ITEM_BACK());
 }
 
 void CommandStationClass::updateThrottleMenu() {
@@ -207,8 +227,6 @@ void CommandStationClass::updateThrottleMenu() {
     const char *name = s;
     throttleMenuScreen->addItem(ITEM_COMMAND(name, []() { CommandStation.updateThrottleInputMenu(convertStringToUint16(substr(throttleMenuScreen->getItemAt(throttleMenuScreen->getCursor())->getText(), 11, 4))); menu.setScreen(throttleInputMenuScreen); menu.reset(); } ));
   }
-
-  throttleMenuScreen->addItem(ITEM_BACK());
 }
 
 void CommandStationClass::updateThrottleInputMenu(uint16_t addr) {
@@ -244,7 +262,6 @@ void CommandStationClass::updateThrottleInputMenu(uint16_t addr) {
   throttleInputMenuScreen->addItem(ITEM_LIST_REF("Button", buttonList, [](const Ref<uint8_t> button) { }, uint8Input3));
   throttleInputMenuScreen->addItem(ITEM_COMMAND("Add or update", []() { CommandStation.addThrottle(CommandStation.getLocoByName(locoList[uint8Input1])->getAddress(), uint8Input2, buttonCode[uint8Input3]) ; CommandStation.updateThrottleMenu(); menu.setScreen(throttleMenuScreen); menu.refresh(); } ));
   throttleInputMenuScreen->addItem(ITEM_COMMAND("Remove", []() { CommandStation.delThrottle(CommandStation.getLocoByName(locoList[uint8Input1])->getAddress()) ; CommandStation.updateThrottleMenu(); menu.setScreen(throttleMenuScreen); menu.reset(); } ));
-  throttleInputMenuScreen->addItem(ITEM_BACK());
 }
 
 uint16_t CommandStationClass::getSlotAddress(uint8_t id) {
@@ -421,7 +438,8 @@ void CommandStationClass::inputLoop() {
   NewEncoder::EncoderState currentEncoderState;
   encoder.getState(currentEncoderState);
   uint8_t index = keyPad.getKey();
-  uint8_t joy_command= joy.getCommand();
+  uint8_t joy_command = joy.getCommand();
+  int16_t joy_deltaY = joy.getDeltaY();
 
   if (_operationMode == OperationMode::opMenu ) {   //Menu mode
     switch ( currentEncoderState.currentClick ) {   //Encoder rotary
@@ -438,16 +456,16 @@ void CommandStationClass::inputLoop() {
     switch ( currentEncoderState.currentButton ) {   //Encoder button
       case NewEncoder::DownButton:
         menu.process(UP);
-        sleep(1);
+        delay(ENCODER_BTN_DELAY);
         break;
       case NewEncoder::UpButton:
         menu.process(DOWN);
-        sleep(1);
+        delay(ENCODER_BTN_DELAY);
         break;
       case NewEncoder::NoButton:
       break;
     }
-
+  
     switch ( joy_command ) {                          //Joystick
       case joyLeft:
         menu.process(BACK);
@@ -462,6 +480,8 @@ void CommandStationClass::inputLoop() {
         menu.process(DOWN);
         break;
     }
+    if ( joy_deltaY > JOY_REPEAT_DELTA ) { menu.process(DOWN); }
+    if ( joy_deltaY < -JOY_REPEAT_DELTA ) { menu.process(UP); }
 
     if (lastIndex != index ) {
       switch (index)                                //Keyboard
@@ -568,11 +588,11 @@ void CommandStationClass::inputLoop() {
       switch ( currentEncoderState.currentButton ) {   //Encoder button
         case NewEncoder::DownButton:
           _leftThrottle->decReverser();
-          sleep(1);
+          delay(ENCODER_BTN_DELAY);
           break;
         case NewEncoder::UpButton:
           _leftThrottle->incReverser();
-          sleep(1);
+          delay(ENCODER_BTN_DELAY);
           break;
         case NewEncoder::NoButton:
         break;
@@ -599,11 +619,10 @@ void CommandStationClass::inputLoop() {
         }
       }
       else {
-        int16_t deltaY=joy.getDeltaY();
-        uint8_t speed_amount = map(abs(deltaY), 0, 2048, 0, 5);
+        uint8_t speed_amount = map(abs(joy_deltaY), 0, 2048, 0, 5);
 
-        if ( deltaY > 150 ) { _rightThrottle->decDrive(speed_amount); }
-        if ( deltaY < -150 ) { _rightThrottle->incDrive(speed_amount); }
+        if ( joy_deltaY > 150 ) { _rightThrottle->decDrive(speed_amount); }
+        if ( joy_deltaY < -150 ) { _rightThrottle->incDrive(speed_amount); }
       }
     }
 
@@ -612,6 +631,7 @@ void CommandStationClass::inputLoop() {
       {
         case BTN_MENU:
           _operationMode = OperationMode::opMenu;
+          menu.setScreen(mainMenuScreen);
           break;
 
         case BTN_DISPLAY:
@@ -1062,11 +1082,10 @@ CommandStationClass CommandStation = CommandStationClass();
 void setup() {
   lcd.init();
   lcd.backlight();
+  lcd.createChar(2, lcdLineChar);
   lcd.setCursor(0, 0);
-  lcd.printf("%-20s", CS_NAME);
-  lcd.setCursor(0, 1);
-  lcd.printf("Version: %-11s", VERSION);
-  delay(1000);
+  lcd.printf("%s (%s)  ", CS_NAME, VERSION);
+  delay(LCD_DELAY);
 
   DCCEX_STREAM.begin(115200);
   LOG_STREAM.begin(115200);
@@ -1081,4 +1100,4 @@ void loop() {
   DCCEXInterface.check();
   XpressNetInterface.update();
   CommandStation.check();
-}
+} 

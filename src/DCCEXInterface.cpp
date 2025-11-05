@@ -4,29 +4,34 @@ DCCEXInterfaceClass::DCCEXInterfaceClass() {
 }
 
 void DCCEXInterfaceClass::init(LiquidCrystal_I2C *lcd, bool wifi) {
+  IPAddress addr(dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3]);
+
   loadConfig();
 
   _dccex.setLogStream(&LOG_STREAM);
   _dccex.setDelegate(&DCCEXInterface);
+
   lcd->setCursor(0, 0);
   lcd->printf("Connecting to DCC-EX");
-
   if (wifi) {
     lcd->setCursor(0, 1);
-    lcd->printf("via tcp port        ");
-    LOG_STREAM.printf("Connecting to DCC-EX (%d.%d.%d.%d:%d)\n", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3], dccExPort);
-    if (_wifiClient.connect(dccExAddress, dccExPort)) {
+    lcd->printf("%d.%d.%d.%d:%d", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3], dccExPort);
+    LOG_STREAM.printf("Connecting to DCC-EX via (%d.%d.%d.%d:%d) ... ", dccExAddress[0], dccExAddress[1], dccExAddress[2], dccExAddress[3], dccExPort);
+    if (_wifiClient.connect(addr, dccExPort)) {
       _dccex.connect(&_wifiClient);
-      LOG_STREAM.printf("Connected to DCCEX server...\n");
+      lcd->setCursor(0, 1);
+      lcd->printf("success");
+      LOG_STREAM.printf("success\n");
     } else {
       lcd->setCursor(0, 1);
-      lcd->printf("via serial port     ");
-      LOG_STREAM.printf("Connection failed, use serial port\n");
+      lcd->printf("failed, use serial  ");
+      LOG_STREAM.printf("failed, use serial port\n");
       _dccex.connect(&DCCEX_STREAM);
     }
   } else {
     lcd->setCursor(0, 1);
     lcd->printf("via serial port     ");
+    LOG_STREAM.printf("Connecting to DCC-EX via serial port\n");
     _dccex.connect(&DCCEX_STREAM);
   }
   _dccex.requestServerVersion();
@@ -34,7 +39,7 @@ void DCCEXInterfaceClass::init(LiquidCrystal_I2C *lcd, bool wifi) {
 
   setTracksType();
 
-  delay(1000);
+  delay(LCD_DELAY);
 }
 
 void DCCEXInterfaceClass::receivedMessage(char *message) {

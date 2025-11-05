@@ -17,8 +17,8 @@ class DCCEXInterfaceClass : public DCCEXProtocolDelegate {
     uint8_t trackCType = DCCEX_TRACK_C_TYPE;
     int trackDAddr = DCCEX_TRACK_D_ADDR;
     uint8_t trackDType = DCCEX_TRACK_D_TYPE;
-    IPAddress dccExAddress = DCCEX_ADDRESS;
-    uint16_t dccExPort = DCCEX_PORT;
+    int dccExAddress[4] = DCCEX_ADDRESS;
+    int dccExPort = DCCEX_PORT;
 
     DCCEXInterfaceClass();
     void init(LiquidCrystal_I2C *lcd, bool wifi);

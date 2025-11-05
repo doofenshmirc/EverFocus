@@ -1,55 +1,74 @@
-#define CS_NAME "EverFocus"
-#define LCD_ROWS        2
-#define LCD_COLS        20
-#define ENCODER_CLK_PIN 15
-#define ENCODER_DT_PIN  4
-#define ENCODER_SW1_PIN 32
-#define ENCODER_SW2_PIN 33
-#define ENCODER_SW3_PIN 27
-#define ENCODER_SWD_PIN 35
-#define MAX_SLOT_NUM    127
-#define LOG_STREAM      Serial
+#define CS_NAME             "EverFocus"
+#define VERSION             "v1.2.2"
+#define LOG_STREAM          Serial
 //#define DEBUG_EVERFOCUS
 
+//LCD
+#define LCD_ROWS            2
+#define LCD_COLS            20
+#define LCD_DELAY           1500       // ms
+
+//Encoder
+#define ENCODER_CLK_PIN     15
+#define ENCODER_DT_PIN      4
+#define ENCODER_SW1_PIN     32
+#define ENCODER_SW2_PIN     33
+#define ENCODER_SW3_PIN     27
+#define ENCODER_SWD_PIN     35
+#define ENCODER_BTN_DELAY   500    //ms
+
+//Joystick 
+#define JOY_X_PIN           39
+#define JOY_Y_PIN           36
+#define JOY_X_CENTER        2048
+#define JOY_Y_CENTER        2048
+#define JOY_LEFT_THRESHOLD  1048
+#define JOY_RIGHT_THRESHOLD 3048
+#define JOY_UP_THRESHOLD    1048
+#define JOY_DOWN_THRESHOLD  3048
+#define JOY_REPEAT_DELTA    1500  
+
 //Wifi Interface 
-#define WIFI 0
-#define WIFI_SSID "Vodafone-D6D4"          // WiFi SSID name here
-#define WIFI_PASS "QWswF2vuz85dyacr"       // WiFi password here
-#define WIFI_TIMEOUT 10                    // Wifi timeout in secundum
+#define WIFI                1
+#define WIFI_SSID           "OpenWrt"                // WiFi SSID name here
+#define WIFI_PASS           ""                       // WiFi password here
+#define WIFI_TIMEOUT        10                       // Wifi timeout in secundum
 
 //DCCEX Interface
-#define DCCEX 1  
-#define DCCEX_ADDRESS { 192, 168, 0, 45 }   // IP address of your EX-CommandStation             
-#define DCCEX_PORT 2560                     // Port number of your EX-CommandStation   
-#define DCCEX_TRACK_A_ADDR 0
-#define DCCEX_TRACK_A_TYPE TrackManagerMode::MAIN
-#define DCCEX_TRACK_B_ADDR 0
-#define DCCEX_TRACK_B_TYPE TrackManagerMode::PROG
-#define DCCEX_TRACK_C_ADDR 0
-#define DCCEX_TRACK_C_TYPE TrackManagerMode::NONE
-#define DCCEX_TRACK_D_ADDR 0
-#define DCCEX_TRACK_D_TYPE TrackManagerMode::NONE
-#define DCCEX_STREAM Serial2  
+#define DCCEX               1
+#define DCCEX_ADDRESS       { 192, 168, 1, 200 }     // IP address of your EX-CommandStation
+#define DCCEX_PORT          2560                     // Port number of your EX-CommandStation
+#define DCCEX_TRACK_A_ADDR  0
+#define DCCEX_TRACK_A_TYPE  TrackManagerMode::MAIN
+#define DCCEX_TRACK_B_ADDR  0
+#define DCCEX_TRACK_B_TYPE  TrackManagerMode::PROG
+#define DCCEX_TRACK_C_ADDR  0
+#define DCCEX_TRACK_C_TYPE  TrackManagerMode::NONE
+#define DCCEX_TRACK_D_ADDR  0
+#define DCCEX_TRACK_D_TYPE  TrackManagerMode::NONE
+#define DCCEX_STREAM        Serial2  
 
 //LocoNet Interface
-#define LOCONET 1               
+#define LOCONET             1
 #ifdef ESP32
-  #define LOCONET_RX 5
-  #define LOCONET_TX 18
+  #define LOCONET_RX        5
+  #define LOCONET_TX        18
 #endif
 #ifdef __AVR__
-  #define LOCONET_TX 7
+  #define LOCONET_TX        7
 #endif
+#define MAX_SLOT_NUM        127
 
 //XpressNet Interface
-#define XPRESSNET 1   
-#define XNETPOPRT    19       //Max485 Busdriver RX/TX-PIN   
-#define XNETCONTROL  23       //Max485 Busdriver Send/Receive-PIN
+#define XPRESSNET           0
+#define XNETPOPRT           19       //Max485 Busdriver RX/TX-PIN   
+#define XNETCONTROL         23       //Max485 Busdriver Send/Receive-PIN
 
-#define TARGET_SPEEDS     {0,    5,   10,  15,  40,  60,  90,  110,  127}  //speed in steps
-#define ACCEL_DELAY_TIMES {1000, 600, 550, 500, 450, 400, 350, 300, 250};   //ms
-#define BRAKE_DELAY_TIMES {1000, 500, 200, 125, 50, 25, 1};   //ms
-#define SPEED_AMOUNT 2
+//Throttle config
+#define TARGET_SPEEDS       {0,    5,   10,  15,  40,  60,  90,  110,  127}  //speed in steps
+#define ACCEL_DELAY_TIMES   {1000, 600, 550, 500, 450, 400, 350, 300, 250};   //ms
+#define BRAKE_DELAY_TIMES   {1000, 500, 200, 125, 50, 25, 1};   //ms
+#define SPEED_AMOUNT        2
 
 //Button codes
 #define BTN_REC      0
@@ -101,13 +120,3 @@
 #define BTN_TOUR     62
 #define BTN_SELECT   63
 #define BTN_ERROR    65
-
-//Joystick 
-#define JOY_X_PIN           39
-#define JOY_Y_PIN           36
-#define JOY_X_CENTER        2048
-#define JOY_Y_CENTER        2048
-#define JOY_LEFT_THRESHOLD  1048
-#define JOY_RIGHT_THRESHOLD 3048
-#define JOY_UP_THRESHOLD    1048
-#define JOY_DOWN_THRESHOLD  3048

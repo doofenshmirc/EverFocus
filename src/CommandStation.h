@@ -8,22 +8,21 @@
 #include "Slot.h"
 #include "Joy.h"
 
-#include <ItemValue.h>
-#include <ItemBool.h>
-#include <ItemBack.h>
-#include <ItemCommand.h>
-#include <ItemList.h>
-#include <ItemSubMenu.h>
 #include <LcdMenu.h>
-#include <ItemWidget.h>
-#include <ItemInputCharset.h>
-
-//#include <widget/WidgetBool.h>
-#include <widget/WidgetList.h>
-#include <widget/WidgetRange.h>
 #include <MenuScreen.h>
 #include <display/LiquidCrystal_I2CAdapter.h>
 #include <renderer/CharacterDisplayRenderer.h>
+#include <ItemValue.h>
+#include <ItemRange.h>
+#include <ItemBool.h>
+#include <ItemCommand.h>
+#include <ItemList.h>
+#include <ItemLabel.h>
+#include <ItemSubMenu.h>
+#include <ItemWidget.h>
+#include <ItemInputCharset.h>
+#include <widget/WidgetList.h>
+#include <widget/WidgetRange.h>
 
 #include "WiFi.h"
 #include "Preferences.h"
